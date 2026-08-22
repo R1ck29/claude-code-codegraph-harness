@@ -110,8 +110,9 @@ if [ -f "$RULE_TARGET" ]; then
   owned_target="$(cat "${CURRENT_ROOT}/rule_target")"
   installed_hash="$(cat "${CURRENT_ROOT}/rule_installed_sha256")"
   current_hash="$(shasum -a 256 "$RULE_TARGET" | awk '{print $1}')"
-  [ "$owned_target" = "$RULE_TARGET" ] && [ "$installed_hash" = "$current_hash" ] || \
+  if [ "$owned_target" != "$RULE_TARGET" ] || [ "$installed_hash" != "$current_hash" ]; then
     fail "Rule target was changed or is not owned by this extension: ${RULE_TARGET}"
+  fi
   PRIOR_RULE_BACKUP="$(cat "${CURRENT_ROOT}/rule_backup")"
   REINSTALL=1
 fi

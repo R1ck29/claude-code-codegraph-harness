@@ -105,6 +105,10 @@ class OfflineInstallerTestCase(unittest.TestCase):
         ]
 
 
+@unittest.skipIf(
+    os.name == "nt",
+    "macOS installer tests require a POSIX path environment",
+)
 class MacOSInstallerTests(OfflineInstallerTestCase):
     def test_dry_run_does_not_create_installation_or_call_claude(self) -> None:
         result = self._run_shell("install.sh", "--dry-run", *self._install_args())
@@ -300,7 +304,12 @@ class WindowsInstallerStaticTests(OfflineInstallerTestCase):
                 env=self._environment(),
                 capture_output=True,
                 text=True,
-                check=True,
+                check=False,
+            )
+            self.assertEqual(
+                result.returncode,
+                0,
+                f"PowerShell install failed:\nstdout={result.stdout}\nstderr={result.stderr}",
             )
             self.assertIn('"status":"success"', result.stdout)
         rule_target = self.config_root / "rules" / "codegraph-harness.md"

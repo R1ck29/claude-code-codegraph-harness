@@ -53,7 +53,8 @@ foreach ($line in Get-Content -LiteralPath (Join-Path $ScriptDir "SHA256SUMS")) 
     $verifiedChecksums[$relative] = $true
 }
 foreach ($relative in $required | Where-Object { $_ -ne "SHA256SUMS" }) {
-    if (-not $verifiedChecksums.ContainsKey($relative)) { Fail "Mandatory file is not checksummed: $relative" }
+    $checksumRelative = $relative.Replace('\', '/')
+    if (-not $verifiedChecksums.ContainsKey($checksumRelative)) { Fail "Mandatory file is not checksummed: $relative" }
 }
 
 $Version = (Get-Content -LiteralPath (Join-Path $ScriptDir "VERSION") -Raw).Trim()
