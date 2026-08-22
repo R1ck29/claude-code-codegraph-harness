@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-code-codegraph-harness"
+version = "0.1.0"
+description = "Comparison and offline packaging harness for Claude Code code-graph backends"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "R1ck29" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.scripts]
+codegraph-harness = "codegraph_harness.cli:main"
+
+[project.optional-dependencies]
+test = ["jsonschema>=4.26,<5"]
+dev = [
+  "black>=26.1,<27",
+  "jsonschema>=4.26,<5",
+  "mypy>=1.19,<2",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

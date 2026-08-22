@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "conditions": [
+    {
+      "id": "baseline",
+      "allowed_data_classifications": [
+        "public-fixture"
+      ],
+      "command": [
+        "claude",
+        "--bare",
+        "--no-session-persistence",
+        "-p",
+        "--output-format",
+        "json",
+        "--mcp-config",
+        "{state}/mcp.json",
+        "--strict-mcp-config"
+      ],
+      "timeout_seconds": 900,
+      "mcp_config": {
+        "mcpServers": {}
+      }
+    },
+    {
+      "id": "graphify-native",
+      "allowed_data_classifications": [
+        "public-fixture"
+      ],
+      "prepare_command": [
+        "graphify",
+        "extract",
+        ".",
+        "--code-only"
+      ],
+      "command": [
+        "claude",
+        "--bare",
+        "--no-session-persistence",
+        "-p",
+        "--output-format",
+        "json",
+        "--mcp-config",
+        "{state}/mcp.json",
+        "--strict-mcp-config"
+      ],
+      "timeout_seconds": 900,
+      "mcp_config": {
+        "mcpServers": {
+          "codegraph": {
+            "type": "stdio",
+            "command": "python",
+            "args": [
+              "-m",
+              "graphify.serve",
+              "{repo}/graphify-out/graph.json"
+            ]
+          }
+        }
+      },
+      "environment": {
+        "GRAPHIFY_QUERY_LOG_DISABLE": "1"
+      }
+    },
+    {
+      "id": "codebase-memory-native",
+      "allowed_data_classifications": [
+        "public-fixture"
+      ],
+      "prepare_commands": [
+        [
+          "codebase-memory-mcp",
+          "config",
+          "set",
+          "auto_index",
+          "false"
+        ],
+        [
+          "codebase-memory-mcp",
+          "config",
+          "set",
+          "auto_watch",
+          "false"
+        ],
+        [
+          "codebase-memory-mcp",
+          "config",
+          "set",
+          "ui_enabled",
+          "false"
+        ],
+        [
+          "codebase-memory-mcp",
+          "cli",
+          "index_repository",
+          "--repo-path",
+          "{repo}"
+        ]
+      ],
+      "command": [
+        "claude",
+        "--bare",
+        "--no-session-persistence",
+        "-p",
+        "--output-format",
+        "json",
+        "--mcp-config",
+        "{state}/mcp.json",
+        "--strict-mcp-config"
+      ],
+      "timeout_seconds": 900,
+      "mcp_config": {
+        "mcpServers": {
+          "codegraph": {
+            "type": "stdio",
+            "command": "codebase-memory-mcp",
+            "args": []
+          }
+        }
+      },
+      "environment": {
+        "CBM_ALLOWED_ROOT": "{repo}",
+        "CBM_CACHE_DIR": "{state}"
+      },
+      "prepare_inherit_environment": [],
+      "command_inherit_environment": []
+    },
+    {
+      "id": "graphify-hybrid",
+      "allowed_data_classifications": [
+        "public-fixture"
+      ],
+      "prepare_command": [
+        "codegraph-graphify-prepare",
+        "--repo",
+        "{repo}",
+        "--state",
+        "{state}"
+      ],
+      "command": [
+        "claude",
+        "--bare",
+        "--no-session-persistence",
+        "-p",
+        "--output-format",
+        "json",
+        "--mcp-config",
+        "{state}/mcp.json",
+        "--strict-mcp-config",
+        "--plugin-dir",
+        "{harness}/plugins/codegraph-evaluator",
+        "--append-system-prompt-file",
+        "{harness}/rules/codegraph-harness.md"
+      ],
+      "timeout_seconds": 900,
+      "mcp_config": {
+        "mcpServers": {
+          "codegraph": {
+            "type": "stdio",
+            "command": "codegraph-graphify-mcp",
+            "args": [
+              "--repo",
+              "{repo}",
+              "--state",
+              "{state}"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "codebase-memory-hybrid",
+      "allowed_data_classifications": [
+        "public-fixture"
+      ],
+      "prepare_command": [
+        "codegraph-cbm-prepare",
+        "--repo",
+        "{repo}",
+        "--state",
+        "{state}"
+      ],
+      "command": [
+        "claude",
+        "--bare",
+        "--no-session-persistence",
+        "-p",
+        "--output-format",
+        "json",
+        "--mcp-config",
+        "{state}/mcp.json",
+        "--strict-mcp-config",
+        "--plugin-dir",
+        "{harness}/plugins/codegraph-evaluator",
+        "--append-system-prompt-file",
+        "{harness}/rules/codegraph-harness.md"
+      ],
+      "timeout_seconds": 900,
+      "mcp_config": {
+        "mcpServers": {
+          "codegraph": {
+            "type": "stdio",
+            "command": "codegraph-cbm-mcp",
+            "args": [
+              "--repo",
+              "{repo}",
+              "--state",
+              "{state}"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

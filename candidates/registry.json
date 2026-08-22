@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-22",
+  "status": "evaluation-only",
+  "candidates": [
+    {
+      "id": "graphify",
+      "repository": "https://github.com/Graphify-Labs/graphify",
+      "tag": "v0.9.48",
+      "commit": "b2cd36267456c166788c95be6e68574064a92a42",
+      "license_observed": "Apache-2.0",
+      "license_source": "https://github.com/Graphify-Labs/graphify/blob/b2cd36267456c166788c95be6e68574064a92a42/LICENSE",
+      "distribution": "not-vendored",
+      "decision": "rejected-for-company-source",
+      "allowed_data_classifications": [
+        "public-fixture"
+      ],
+      "reason": "Pinned upstream stdio MCP exposes GitHub-connected PR tools and the product includes external LLM paths."
+    },
+    {
+      "id": "codebase-memory",
+      "repository": "https://github.com/DeusData/codebase-memory-mcp",
+      "tag": "v0.10.8",
+      "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+      "license_observed": "MIT",
+      "license_source": "https://github.com/DeusData/codebase-memory-mcp/blob/46ae198fc11cda80e817acbc5f5908d7c2de7032/LICENSE",
+      "distribution": "native-binary-only-after-internal-verification",
+      "decision": "conditional-static-audit-only",
+      "allowed_data_classifications": [
+        "public-fixture",
+        "company-source-after-dynamic-gate"
+      ],
+      "reason": "No native source/query HTTP sender was identified statically; online wrappers/installers are banned and runtime egress remains unproven."
+    }
+  ],
+  "notes": [
+    "Versions and commit identifiers are discovery inputs, not approval records.",
+    "Re-verify source, license, dependencies, provenance, vulnerabilities, and platform support before every internal evaluation or redistribution.",
+    "See docs/candidate-egress-audit.md. Dynamic Windows/macOS egress evidence is required before company-source use."
+  ]
+}

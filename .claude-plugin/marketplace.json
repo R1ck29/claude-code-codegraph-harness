@@ -1,0 +1,17 @@
+{
+  "name": "codegraph-harness",
+  "owner": {
+    "name": "R1ck29"
+  },
+  "metadata": {
+    "description": "Evaluation-first Claude Code code intelligence plugins"
+  },
+  "plugins": [
+    {
+      "name": "codegraph-evaluator",
+      "source": "./plugins/codegraph-evaluator",
+      "description": "Routes structural code questions to approved graph tools when available and verifies claims against source.",
+      "version": "0.1.0"
+    }
+  ]
+}

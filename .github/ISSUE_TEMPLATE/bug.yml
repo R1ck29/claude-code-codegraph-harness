@@ -1,0 +1,42 @@
+name: Public-fixture bug report
+description: Report a reproducible issue using synthetic or redistributable public data only.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not submit company code, prompts, paths, configuration, screenshots, logs, graph output, hostnames, credentials, or internal artifact identifiers.
+  - type: checkboxes
+    id: public-data
+    attributes:
+      label: Public-data confirmation
+      options:
+        - label: I confirm this report and every attachment contain only synthetic or redistributable public data.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Harness version
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [macOS, Windows, Linux evaluation host]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Public reproduction
+      description: Provide minimal steps using a synthetic or public fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "entry-point-trace",
+      "prompt": "Identify one user-facing entry point in this repository and trace its execution to the main implementation. Cite the files and symbols that support every step. Do not modify files.",
+      "timeout_seconds": 900
+    },
+    {
+      "id": "change-impact",
+      "prompt": "Choose one public interface in this repository and identify its direct callers, tests, and configuration dependencies. Separate verified references from uncertain or dynamic relationships. Do not modify files.",
+      "timeout_seconds": 900
+    },
+    {
+      "id": "architecture-summary",
+      "prompt": "Explain the repository architecture using evidence from source files. Name the main components, their responsibilities, and the dependency direction between them. Do not modify files.",
+      "timeout_seconds": 900
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r1ck29.github.io/claude-code-codegraph-harness/contracts/evaluation-conditions.schema.json",
+  "title": "Codegraph evaluation conditions",
+  "type": "object",
+  "required": ["schema_version", "conditions"],
+  "additionalProperties": false,
+  "$defs": {
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "environmentName": {
+      "allOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        {
+          "not": {
+            "pattern": "^(?:[Hh][Oo][Mm][Ee]|[Uu][Ss][Ee][Rr][Pp][Rr][Oo][Ff][Ii][Ll][Ee]|[Aa][Pp][Pp][Dd][Aa][Tt][Aa]|[Ll][Oo][Cc][Aa][Ll][Aa][Pp][Pp][Dd][Aa][Tt][Aa]|[Cc][Oo][Mm][Ss][Pp][Ee][Cc]|[Ll][Aa][Nn][Gg]|[Ll][Cc]_[Aa][Ll][Ll]|[Pp][Aa][Tt][Hh]|[Pp][Aa][Tt][Hh][Ee][Xx][Tt]|[Ss][Yy][Ss][Tt][Ee][Mm][Rr][Oo][Oo][Tt]|[Tt][Ee][Mm][Pp]|[Tt][Mm][Pp]|[Tt][Mm][Pp][Dd][Ii][Rr]|[Ww][Ii][Nn][Dd][Ii][Rr])$"
+          }
+        }
+      ]
+    },
+    "environmentNames": {
+      "type": "array",
+      "$comment": "The runner additionally rejects case-insensitive duplicates; JSON Schema uniqueItems compares strings case-sensitively.",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/environmentName"
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "allowed_data_classifications",
+          "command"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "baseline",
+              "graphify-native",
+              "codebase-memory-native",
+              "graphify-hybrid",
+              "codebase-memory-hybrid"
+            ]
+          },
+          "allowed_data_classifications": {
+            "const": ["public-fixture"]
+          },
+          "command": {
+            "$ref": "#/$defs/command"
+          },
+          "prepare_command": {
+            "$ref": "#/$defs/command"
+          },
+          "prepare_commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/command"
+            }
+          },
+          "timeout_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "environment": {
+            "type": "object",
+            "$comment": "The runner also rejects case-insensitive duplicate property names and case-insensitive overlap with either inherit array; JSON Schema cannot compare those names across fields.",
+            "propertyNames": {
+              "$ref": "#/$defs/environmentName"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "prepare_inherit_environment": {
+            "$ref": "#/$defs/environmentNames"
+          },
+          "command_inherit_environment": {
+            "$ref": "#/$defs/environmentNames"
+          },
+          "mcp_config": {
+            "type": "object"
+          }
+        },
+        "not": {
+          "required": ["prepare_command", "prepare_commands"]
+        }
+      }
+    }
+  }
+}

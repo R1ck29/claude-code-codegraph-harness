@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r1ck29.github.io/claude-code-codegraph-harness/contracts/evaluation-result.schema.json",
+  "title": "Codegraph evaluation result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "status",
+    "evaluation",
+    "summary",
+    "next_actions",
+    "artifacts",
+    "preparations",
+    "runs"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "sha256", "stored"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["stdout", "stderr", "mcp_config"]
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "stored": {
+          "type": "boolean"
+        },
+        "relative_path": {
+          "type": "string",
+          "pattern": "^(raw|state)/[A-Za-z0-9_.\\/-]+$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "stored": {"const": true}
+            },
+            "required": ["stored"]
+          },
+          "then": {
+            "required": ["relative_path"]
+          },
+          "else": {
+            "not": {
+              "required": ["relative_path"]
+            }
+          }
+        }
+      ]
+    },
+    "usage": {
+      "type": "object",
+      "required": [
+        "input_tokens",
+        "output_tokens",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "input_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "output_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "cache_creation_input_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "cache_read_input_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "process": {
+      "type": "object",
+      "required": ["status", "returncode", "error", "duration_ms", "artifacts"],
+      "properties": {
+        "status": {
+          "enum": ["succeeded", "failed", "blocked", "not_required"]
+        },
+        "returncode": {"type": ["integer", "null"]},
+        "error": {"type": ["string", "null"]},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "artifacts": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/artifact"}
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["completed", "completed_with_failures"]},
+    "evaluation": {
+      "type": "object",
+      "required": [
+        "seed",
+        "repetitions",
+        "conditions",
+        "condition_data_policies",
+        "repo_path_sha256",
+        "harness_path_sha256",
+        "data_classification",
+        "security_evidence_sha256",
+        "repo_is_disposable_copy",
+        "store_raw_artifacts",
+        "environment_policy",
+        "task_suite_sha256",
+        "conditions_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seed": {"type": "integer"},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string"}
+        },
+        "condition_data_policies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {"const": "public-fixture"}
+          }
+        },
+        "repo_path_sha256": {"$ref": "#/$defs/sha256"},
+        "harness_path_sha256": {"$ref": "#/$defs/sha256"},
+        "data_classification": {
+          "const": "public-fixture"
+        },
+        "security_evidence_sha256": {
+          "type": "null"
+        },
+        "repo_is_disposable_copy": {"type": "boolean"},
+        "store_raw_artifacts": {"type": "boolean"},
+        "environment_policy": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "minimum_environment_names",
+              "explicit_environment_names",
+              "prepare_inherit_environment",
+              "command_inherit_environment"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "minimum_environment_names": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "explicit_environment_names": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "prepare_inherit_environment": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "command_inherit_environment": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        },
+        "task_suite_sha256": {"$ref": "#/$defs/sha256"},
+        "conditions_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total_runs", "succeeded", "failed", "state_cleanup", "by_condition"],
+      "additionalProperties": false,
+      "properties": {
+        "total_runs": {"type": "integer", "minimum": 0},
+        "succeeded": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "state_cleanup": {"enum": ["succeeded", "failed"]},
+        "by_condition": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["total_runs", "succeeded", "failed"],
+            "additionalProperties": false,
+            "properties": {
+              "total_runs": {"type": "integer", "minimum": 0},
+              "succeeded": {"type": "integer", "minimum": 0},
+              "failed": {"type": "integer", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "preparations": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {"$ref": "#/$defs/process"},
+          {
+            "type": "object",
+            "required": ["condition"],
+            "properties": {
+              "condition": {"type": "string"},
+              "step": {"type": "integer", "minimum": 0}
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {"$ref": "#/$defs/process"},
+          {
+            "type": "object",
+            "required": [
+              "condition",
+              "task",
+              "prompt_sha256",
+              "seed",
+              "repetition",
+              "usage",
+              "cost_usd"
+            ],
+            "properties": {
+              "condition": {"type": "string"},
+              "task": {"type": "string"},
+              "prompt_sha256": {"$ref": "#/$defs/sha256"},
+              "seed": {"type": "integer"},
+              "repetition": {"type": "integer", "minimum": 0},
+              "usage": {"$ref": "#/$defs/usage"},
+              "cost_usd": {"type": ["number", "null"], "minimum": 0}
+            }
+          }
+        ],
+        "unevaluatedProperties": false
+      }
+    }
+  }
+}

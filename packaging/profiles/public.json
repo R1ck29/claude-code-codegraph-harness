@@ -1,0 +1,7 @@
+{
+  "description": "Public source-only bundle. No vendor binaries are permitted.",
+  "kind": "public",
+  "profile_id": "public",
+  "schema_version": "1.0",
+  "vendor_files": []
+}

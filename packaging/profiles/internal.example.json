@@ -1,0 +1,7 @@
+{
+  "description": "Template for an internal bundle. Add only approved vendor files with exact SHA-256 values.",
+  "kind": "internal",
+  "profile_id": "internal-example",
+  "schema_version": "1.0",
+  "vendor_files": []
+}
