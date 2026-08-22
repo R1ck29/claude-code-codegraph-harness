@@ -34,7 +34,7 @@ class BundleBuilderTests(unittest.TestCase):
         self._write("LICENSE", "Test license\n")
         self._write("THIRD_PARTY_NOTICES.md", "Test notice\n")
         self._write("README-INSTALL.txt", "Install instructions\n")
-        self._write("docs/how-it-works-ja.md", "# 仕組み\n")
+        self._write("docs/how-it-works-ja.md", "# 仕組み\r\n".encode("utf-8"))
 
     def _write(self, relative_path: str, content: str | bytes) -> Path:
         path = self.root / relative_path
@@ -130,7 +130,7 @@ class BundleBuilderTests(unittest.TestCase):
             self.assertIn("HOW-IT-WORKS-JA.md", archive.namelist())
             self.assertEqual(
                 archive.read("HOW-IT-WORKS-JA.md"),
-                "# 仕組み\n".encode("utf-8"),
+                (self.root / "docs" / "how-it-works-ja.md").read_bytes(),
             )
 
     def test_default_exclusions_omit_metadata_cache_results_secrets_and_binaries(
