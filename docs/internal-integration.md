@@ -31,10 +31,10 @@ Example assembly command:
 
 ```text
 codegraph-harness bundle \
-  --version 0.1.0-company.1 \
+  --version 0.1.1-company.1 \
   --profile /secure-build/input/company-profile.json \
   --vendor-dir /secure-build/input/vendor \
-  --output /secure-build/output/codegraph-harness-0.1.0-company.1.zip
+  --output /secure-build/output/codegraph-harness-0.1.1-company.1.zip
 ```
 
 The profile, vendor directory, and output paths above are examples, not prescribed company paths.
@@ -66,6 +66,6 @@ Verify the ZIP against the software portal's separately stored SHA-256 value or 
 
 ## Production gate
 
-Do not add a backend to the business-user bundle until the backend ADR is closed with recorded evidence for quality, security, freshness, offline operation, Windows/macOS support, and rollback. The public `v0.1.0-eval` plugin intentionally contains no MCP server.
+Do not add a backend to the business-user bundle until the backend ADR is closed with recorded evidence for quality, security, freshness, offline operation, Windows/macOS support, and rollback. The public `v0.1.1-eval` plugin intentionally contains no MCP server.
 
 For environments where company code cannot leave the organization, AppSec or endpoint engineering must attach firewall/EDR evidence showing that the backend and its descendants cannot reach DNS, HTTP(S), proxies, update services, or telemetry endpoints. Configuration flags alone are insufficient. If the approved Claude Code service path itself is uncertain, stop and resolve that contract before evaluating company source.

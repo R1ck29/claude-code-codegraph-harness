@@ -1,5 +1,7 @@
 Claude Code Codegraph Harness - Offline Bundle
 
+For a plain-language Japanese explanation, read HOW-IT-WORKS-JA.md in this folder.
+
 This bundle installs a vendor-neutral evaluation plugin and public Rule.
 It does not select or download a code-graph backend.
 

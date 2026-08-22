@@ -34,6 +34,7 @@ class BundleBuilderTests(unittest.TestCase):
         self._write("LICENSE", "Test license\n")
         self._write("THIRD_PARTY_NOTICES.md", "Test notice\n")
         self._write("README-INSTALL.txt", "Install instructions\n")
+        self._write("docs/how-it-works-ja.md", "# 仕組み\n")
 
     def _write(self, relative_path: str, content: str | bytes) -> Path:
         path = self.root / relative_path
@@ -119,6 +120,18 @@ class BundleBuilderTests(unittest.TestCase):
             for line in sums:
                 digest, name = line.split("  ", 1)
                 self.assertEqual(digest, _sha256(archive.read(name)))
+
+    def test_bundle_includes_the_canonical_japanese_guide(self) -> None:
+        output = Path(self.temp_dir.name) / "bundle.zip"
+
+        build_bundle(self.root, output, version="1.0.0", profile_path=self._profile())
+
+        with zipfile.ZipFile(output) as archive:
+            self.assertIn("HOW-IT-WORKS-JA.md", archive.namelist())
+            self.assertEqual(
+                archive.read("HOW-IT-WORKS-JA.md"),
+                "# 仕組み\n".encode("utf-8"),
+            )
 
     def test_default_exclusions_omit_metadata_cache_results_secrets_and_binaries(
         self,

@@ -35,6 +35,7 @@ _FILE_MAPPINGS = (
     ("LICENSE", "LICENSE"),
     ("THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"),
     ("README-INSTALL.txt", "README-INSTALL.txt"),
+    ("docs/how-it-works-ja.md", "HOW-IT-WORKS-JA.md"),
 )
 _EXCLUDED_DIRECTORY_NAMES = frozenset(
     {

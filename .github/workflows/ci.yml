@@ -30,7 +30,7 @@ jobs:
       - name: Compile package
         run: python -m compileall -q src tests
       - name: Build public bundle
-        run: codegraph-harness bundle --version 0.1.0-ci --profile packaging/profiles/public.json --output dist/codegraph-harness-0.1.0-ci.zip
+        run: codegraph-harness bundle --version 0.1.1-ci --profile packaging/profiles/public.json --output dist/codegraph-harness-0.1.1-ci.zip
 
   plugin-validation:
     runs-on: ubuntu-latest

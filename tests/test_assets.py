@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 import unittest
 
+from codegraph_harness import __version__
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE_PATH = PROJECT_ROOT / ".claude-plugin" / "marketplace.json"
 PLUGIN_ROOT = PROJECT_ROOT / "plugins" / "codegraph-evaluator"
@@ -77,6 +79,7 @@ class PluginAssetTests(unittest.TestCase):
         project_version = re.search(r'(?m)^version = "([^"]+)"$', project)
         self.assertIsNotNone(project_version)
         self.assertEqual(manifest["version"], project_version.group(1))
+        self.assertEqual(__version__, project_version.group(1))
 
     def test_skill_frontmatter_and_references_are_complete(self) -> None:
         skill = PLUGIN_ROOT / "skills" / "code-intelligence" / "SKILL.md"

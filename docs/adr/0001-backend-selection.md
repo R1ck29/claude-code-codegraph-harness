@@ -9,7 +9,7 @@ Graphify and Codebase-Memory are separate implementations with different packagi
 
 ## Decision
 
-No backend is selected in `v0.1.0-eval`.
+No backend is selected in `v0.1.1-eval`.
 
 Pinned upstream Graphify is rejected for company-source use after static source audit identified GitHub-connected PR tools in its stdio MCP and external LLM paths. Its conditions remain public-fixture-only.
 
