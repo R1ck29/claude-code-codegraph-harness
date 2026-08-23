@@ -747,6 +747,7 @@ class WindowsInstallerStaticTests(OfflineInstallerTestCase):
             "Bundle entry must not be a reparse point",
             "Select-Object -First 1",
             "$gitCommand.Path",
+            "[string]::IsNullOrWhiteSpace($serialized)",
             "Test-Path -LiteralPath",
             '"bundle-manifest.json"',
             "Unsafe checksum path",

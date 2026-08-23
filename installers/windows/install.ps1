@@ -204,8 +204,9 @@ function Get-RegistrationHash([string]$Client, [string]$Name) {
     try {
         if ($Client -eq "claude") { $output = & claude mcp get $Name 2>$null }
         else { $output = & codex mcp get $Name --json 2>$null }
-        if ($LASTEXITCODE -ne 0) { return $null }
-        $bytes = [Text.Encoding]::UTF8.GetBytes(($output -join "`n"))
+        $serialized = $output -join "`n"
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($serialized)) { return $null }
+        $bytes = [Text.Encoding]::UTF8.GetBytes($serialized)
         return ([Security.Cryptography.SHA256]::Create().ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") }) -join ""
     }
     finally { $ErrorActionPreference = $savedPreference }
