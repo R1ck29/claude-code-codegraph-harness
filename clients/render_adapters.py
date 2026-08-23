@@ -178,7 +178,9 @@ The graph is derived static-analysis data, not source-of-truth. The current sour
 
 
 def _load_policy() -> tuple[Mapping[str, object], str]:
-    policy_bytes = POLICY_PATH.read_bytes()
+    # Git and ZIP extraction may materialize text with CRLF on Windows.  The
+    # routing policy hash identifies logical UTF-8 content, not host newlines.
+    policy_bytes = POLICY_PATH.read_bytes().replace(b"\r\n", b"\n")
     policy = json.loads(policy_bytes)
     if not isinstance(policy, dict):
         raise ValueError("routing policy must be a JSON object")

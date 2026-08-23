@@ -745,6 +745,8 @@ class WindowsInstallerStaticTests(OfflineInstallerTestCase):
             "Get-ChildItem -LiteralPath $ScriptDir -Force -Recurse",
             "Unchecksummed bundle file",
             "Bundle entry must not be a reparse point",
+            "Select-Object -First 1",
+            "$gitCommand.Path",
             "Test-Path -LiteralPath",
             '"bundle-manifest.json"',
             "Unsafe checksum path",

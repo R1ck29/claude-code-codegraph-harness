@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import re
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = PROJECT_ROOT / "clients" / "routing-policy.json"
@@ -91,11 +93,28 @@ class ClientAdapterContractTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-        policy_hash = hashlib.sha256(POLICY_PATH.read_bytes()).hexdigest()
+        policy_bytes = POLICY_PATH.read_bytes().replace(b"\r\n", b"\n")
+        policy_hash = hashlib.sha256(policy_bytes).hexdigest()
         marker = f"routing-policy-sha256: {policy_hash}"
         for path in GENERATED_PATHS:
             with self.subTest(path=path):
                 self.assertIn(marker, path.read_text(encoding="utf-8"))
+
+    def test_policy_identity_is_independent_of_windows_line_endings(self) -> None:
+        spec = importlib.util.spec_from_file_location("render_adapters", RENDERER_PATH)
+        self.assertIsNotNone(spec)
+        assert spec is not None
+        self.assertIsNotNone(spec.loader)
+        assert spec.loader is not None
+        renderer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(renderer)
+        original = POLICY_PATH.read_bytes()
+        windows_bytes = original.replace(b"\n", b"\r\n")
+
+        with mock.patch.object(Path, "read_bytes", return_value=windows_bytes):
+            _, policy_hash = renderer._load_policy()
+
+        self.assertEqual(policy_hash, hashlib.sha256(original).hexdigest())
 
     def test_generated_adapters_share_routing_and_fallback_contract(self) -> None:
         for path in GENERATED_PATHS:

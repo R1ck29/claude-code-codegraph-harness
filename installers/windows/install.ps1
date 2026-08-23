@@ -149,9 +149,9 @@ if (Test-Path -LiteralPath $runtimeManifest -PathType Leaf) {
     $backendSha256 = Get-Sha256 $BackendSource
     if (-not $AdapterOnly) {
         if (-not $AllowedRoot) { Fail "-AllowedRoot is required for runtime installation" }
-        $gitCommand = Get-Command git -CommandType Application -ErrorAction SilentlyContinue
+        $gitCommand = Get-Command git -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
         if (-not $gitCommand) { Fail "A managed Git executable is required for runtime installation" }
-        $gitBinary = [IO.Path]::GetFullPath($gitCommand.Source)
+        $gitBinary = [IO.Path]::GetFullPath($gitCommand.Path)
         $gitSha256 = Get-Sha256 $gitBinary
         $runtimeInstall = $true
     }
