@@ -896,7 +896,10 @@ class WindowsInstallerStaticTests(OfflineInstallerTestCase):
         self.assertTrue(receipt["runtimeInstalled"])
         self.assertEqual(receipt["runtimePlatform"], "windows")
         self.assertEqual(receipt["runtimeArch"], "x86_64")
-        self.assertEqual(receipt["allowedRoot"], str(self.allowed_root))
+        self.assertTrue(
+            os.path.samefile(receipt["allowedRoot"], self.allowed_root),
+            f"receipt allowedRoot={receipt['allowedRoot']!r}",
+        )
         self.assertIn("--data-classification public-fixture", self.fake_log.read_text())
         self.assertIn(
             "--data-classification public-fixture", self.fake_codex_log.read_text()
