@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "policy_id": "company-codegraph-routing",
+  "model_action_scope": "read-only",
+  "gateway_boundary": {
+    "transport": "registered local gateway only",
+    "upstream_access": "never direct",
+    "data_egress": "do not send source or graph output to another service"
+  },
+  "freshness_strategy": {
+    "query_responses": "authoritative and revalidated on every call",
+    "status_tool": "optional diagnostics only",
+    "redundant_preflight": "do not call status before a normal query"
+  },
+  "tools": [
+    "codegraph_status",
+    "codegraph_search",
+    "codegraph_neighbors",
+    "codegraph_impact",
+    "codegraph_architecture"
+  ],
+  "structural_tasks": [
+    "symbol discovery",
+    "callers and callees",
+    "dependency paths",
+    "neighbors and hubs",
+    "architecture boundaries",
+    "change-impact candidates"
+  ],
+  "source_first_tasks": [
+    "exact control flow",
+    "error and validation behavior",
+    "runtime dependency injection",
+    "reflection and generated code",
+    "configuration-driven behavior",
+    "final change decisions"
+  ],
+  "fallback_conditions": [
+    "unavailable",
+    "stale",
+    "dirty",
+    "truncated"
+  ],
+  "fallback_tools": [
+    "Read",
+    "Grep",
+    "LSP"
+  ],
+  "truth_sources": [
+    "source",
+    "tests"
+  ]
+}

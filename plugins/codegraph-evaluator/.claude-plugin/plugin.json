@@ -1,8 +1,8 @@
 {
   "name": "codegraph-evaluator",
   "displayName": "Codegraph Evaluator",
-  "version": "0.1.1",
-  "description": "Evaluation-first routing and source verification for approved code-graph MCP backends.",
+  "version": "0.2.0-rc.1",
+  "description": "Claude Code routing and source verification for the approved local read-only codegraph gateway.",
   "author": {
     "name": "R1ck29"
   },

@@ -63,7 +63,10 @@
         "input_tokens",
         "output_tokens",
         "cache_creation_input_tokens",
-        "cache_read_input_tokens"
+        "cache_read_input_tokens",
+        "cached_input_tokens",
+        "cache_write_input_tokens",
+        "reasoning_output_tokens"
       ],
       "additionalProperties": false,
       "properties": {
@@ -76,7 +79,57 @@
         "cache_read_input_tokens": {
           "type": ["integer", "null"],
           "minimum": 0
+        },
+        "cached_input_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "cache_write_input_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "reasoning_output_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0
         }
+      }
+    },
+    "toolCalls": {
+      "type": "object",
+      "required": ["available", "count", "by_tool"],
+      "additionalProperties": false,
+      "properties": {
+        "available": {"type": "boolean"},
+        "count": {"type": ["integer", "null"], "minimum": 0},
+        "by_tool": {
+          "type": "object",
+          "propertyNames": {"pattern": "^[A-Za-z0-9_.-]+$"},
+          "additionalProperties": {"type": "integer", "minimum": 1}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"available": {"const": true}}, "required": ["available"]},
+          "then": {"properties": {"count": {"type": "integer"}}},
+          "else": {
+            "properties": {
+              "count": {"type": "null"},
+              "by_tool": {"maxProperties": 0}
+            }
+          }
+        }
+      ]
+    },
+    "oracle": {
+      "type": "object",
+      "required": ["configured", "passed", "required_matched", "required_total", "forbidden_matched"],
+      "additionalProperties": false,
+      "properties": {
+        "configured": {"type": "boolean"},
+        "passed": {"type": ["boolean", "null"]},
+        "required_matched": {"type": "integer", "minimum": 0},
+        "required_total": {"type": "integer", "minimum": 0},
+        "forbidden_matched": {"type": "integer", "minimum": 0}
       }
     },
     "process": {
@@ -105,6 +158,8 @@
         "seed",
         "repetitions",
         "conditions",
+        "clients",
+        "variants",
         "condition_data_policies",
         "repo_path_sha256",
         "harness_path_sha256",
@@ -124,6 +179,18 @@
           "type": "array",
           "minItems": 1,
           "items": {"type": "string"}
+        },
+        "clients": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["claude", "codex"]}
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["baseline", "graph-gateway", "legacy-candidate"]}
         },
         "condition_data_policies": {
           "type": "object",
@@ -190,12 +257,26 @@
           "type": "object",
           "additionalProperties": {
             "type": "object",
-            "required": ["total_runs", "succeeded", "failed"],
+            "required": [
+              "client", "variant", "total_runs", "succeeded", "failed",
+              "oracle_passed", "oracle_total", "median_input_tokens",
+              "median_cached_input_tokens", "median_output_tokens",
+              "tool_calls_observed", "tool_call_runs_observed"
+            ],
             "additionalProperties": false,
             "properties": {
               "total_runs": {"type": "integer", "minimum": 0},
               "succeeded": {"type": "integer", "minimum": 0},
               "failed": {"type": "integer", "minimum": 0}
+              ,"client": {"enum": ["claude", "codex"]}
+              ,"variant": {"enum": ["baseline", "graph-gateway", "legacy-candidate"]}
+              ,"oracle_passed": {"type": "integer", "minimum": 0}
+              ,"oracle_total": {"type": "integer", "minimum": 0}
+              ,"median_input_tokens": {"type": ["number", "null"], "minimum": 0}
+              ,"median_cached_input_tokens": {"type": ["number", "null"], "minimum": 0}
+              ,"median_output_tokens": {"type": ["number", "null"], "minimum": 0}
+              ,"tool_calls_observed": {"type": "integer", "minimum": 0}
+              ,"tool_call_runs_observed": {"type": "integer", "minimum": 0}
             }
           }
         }
@@ -235,21 +316,33 @@
             "type": "object",
             "required": [
               "condition",
+              "client",
+              "variant",
               "task",
               "prompt_sha256",
               "seed",
               "repetition",
               "usage",
-              "cost_usd"
+              "cost_usd",
+              "tool_calls",
+              "oracle",
+              "final_response_sha256"
             ],
             "properties": {
               "condition": {"type": "string"},
+              "client": {"enum": ["claude", "codex"]},
+              "variant": {"enum": ["baseline", "graph-gateway", "legacy-candidate"]},
               "task": {"type": "string"},
               "prompt_sha256": {"$ref": "#/$defs/sha256"},
               "seed": {"type": "integer"},
               "repetition": {"type": "integer", "minimum": 0},
               "usage": {"$ref": "#/$defs/usage"},
-              "cost_usd": {"type": ["number", "null"], "minimum": 0}
+              "cost_usd": {"type": ["number", "null"], "minimum": 0},
+              "tool_calls": {"$ref": "#/$defs/toolCalls"},
+              "oracle": {"$ref": "#/$defs/oracle"},
+              "final_response_sha256": {
+                "anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+              }
             }
           }
         ],

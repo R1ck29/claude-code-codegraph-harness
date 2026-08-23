@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "recorded_at": "2026-08-22",
-  "status": "evaluation-only",
+  "status": "gateway-implementation",
   "candidates": [
     {
       "id": "graphify",
@@ -25,12 +25,12 @@
       "license_observed": "MIT",
       "license_source": "https://github.com/DeusData/codebase-memory-mcp/blob/46ae198fc11cda80e817acbc5f5908d7c2de7032/LICENSE",
       "distribution": "native-binary-only-after-internal-verification",
-      "decision": "conditional-static-audit-only",
+      "decision": "conditional-gateway-backend",
       "allowed_data_classifications": [
         "public-fixture",
         "company-source-after-dynamic-gate"
       ],
-      "reason": "No native source/query HTTP sender was identified statically; online wrappers/installers are banned and runtime egress remains unproven."
+      "reason": "No native source/query HTTP sender was identified statically, and the pinned macOS arm64 binary indexed and queried a public fixture under external-network deny. Online wrappers/installers are banned; Windows and enterprise process-tree evidence remain required before company-source use."
     }
   ],
   "notes": [

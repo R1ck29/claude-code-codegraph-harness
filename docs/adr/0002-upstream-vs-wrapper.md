@@ -1,29 +1,30 @@
 # ADR 0002: Upstream, wrapper, or fork
 
-- Status: Open
-- Decision date: Not set
+- Status: Company gateway selected; upstream backend remains unmodified
+- Decision date: 2026-08-23
 
-## Decision order
+## Decision
 
-1. Prefer an exact upstream artifact with automatic configuration disabled.
-2. Add a thin wrapper only for a measured boundary gap: root containment, freshness, response bounds, stable tool schema, telemetry, or platform launch differences.
-3. Fork only when the defect is inside parsing or graph construction and cannot be corrected by configuration, wrapper, or an accepted upstream change.
-4. If no option passes, retain baseline Claude Code.
+Place a company-owned local stdio MCP gateway in front of the exact upstream native backend. Keep the parser and graph implementation unmodified. The gateway is the only MCP surface registered with Claude Code and Codex.
 
-## Required evidence for a wrapper
+The gateway exists because the upstream analysis profile is still broader than the company contract: it includes arbitrary graph queries, source snippets, project listing, change detection, and index diagnostics. Client-side allowlists are defense in depth; they do not make an exposed upstream tool safe.
 
-- the native candidate passed core quality evaluation;
-- the native gap has a reproducible test;
-- the wrapper fixes that test without materially reducing the measured benefit;
-- wrapper ownership and compatibility testing are assigned.
+The gateway exposes only:
 
-## Required evidence for a fork
+- `codegraph_status`
+- `codegraph_search`
+- `codegraph_neighbors`
+- `codegraph_impact`
+- `codegraph_architecture`
 
-- the wrapper path is technically insufficient;
-- an upstream issue or change request exists where appropriate;
-- the patch ledger, rebase procedure, build provenance, and supported platform owners are approved.
+It rejects arbitrary projects, absolute paths, arbitrary graph languages, indexing, mutation, source-body retrieval, URLs, and unbounded responses. It also owns freshness checks and normalizes all output into a backend-independent schema.
 
-## Current candidate application
+Index creation is a separate human/administrator command, never a model-callable MCP tool. The backend runs with UI, watcher, auto-index, updater, and online installation paths disabled.
 
-- Graphify upstream is rejected for company source. This repository does not approve a wrapper or fork as a substitute; either would be a new candidate with a new source and dynamic security audit.
-- Codebase-Memory may be evaluated only as an internally verified native binary with online wrappers/installers excluded and runtime hardening applied. A wrapper decision remains open until native quality and dynamic security gates pass.
+## Fork policy
+
+A fork is not approved for v1. Open a fork decision only if a reproducible parser or graph-construction defect cannot be fixed by configuration, gateway translation, or an accepted upstream change. A fork requires its own provenance, security audit, patch ledger, and multi-platform build process.
+
+## Fallback
+
+If the backend or gateway is unavailable, stale, truncated, outside the approved root, or fails a security/quality/token gate, both clients must use their normal source, grep, and language-server exploration. Graph failure must never block ordinary code work.

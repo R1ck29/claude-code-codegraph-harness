@@ -1,7 +1,9 @@
 {
+  "approved_fixture_manifests": [],
   "description": "Public source-only bundle. No vendor binaries are permitted.",
   "kind": "public",
   "profile_id": "public",
+  "runtimes": [],
   "schema_version": "1.0",
   "vendor_files": []
 }

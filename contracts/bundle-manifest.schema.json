@@ -11,7 +11,8 @@
     "next_actions",
     "artifacts",
     "version",
-    "profile"
+    "profile",
+    "runtimes"
   ],
   "properties": {
     "schema_version": {
@@ -59,6 +60,7 @@
             "enum": [
               "repository",
               "vendor",
+              "runtime",
               "generated"
             ]
           }
@@ -86,6 +88,50 @@
             "public",
             "internal"
           ]
+        }
+      }
+    },
+    "runtimes": {
+      "type": "array",
+      "anyOf": [
+        {
+          "maxItems": 0
+        },
+        {
+          "minItems": 4,
+          "maxItems": 4
+        }
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "platform",
+          "arch",
+          "gateway_sha256",
+          "backend_sha256"
+        ],
+        "properties": {
+          "platform": {
+            "enum": [
+              "macos",
+              "windows"
+            ]
+          },
+          "arch": {
+            "enum": [
+              "arm64",
+              "x86_64"
+            ]
+          },
+          "gateway_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "backend_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
         }
       }
     }

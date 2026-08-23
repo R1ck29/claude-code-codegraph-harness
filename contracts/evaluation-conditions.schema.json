@@ -57,8 +57,18 @@
               "graphify-native",
               "codebase-memory-native",
               "graphify-hybrid",
-              "codebase-memory-hybrid"
+              "codebase-memory-hybrid",
+              "claude-baseline",
+              "claude-graph-gateway",
+              "codex-baseline",
+              "codex-graph-gateway"
             ]
+          },
+          "client": {
+            "enum": ["claude", "codex"]
+          },
+          "variant": {
+            "enum": ["baseline", "graph-gateway", "legacy-candidate"]
           },
           "allowed_data_classifications": {
             "const": ["public-fixture"]

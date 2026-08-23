@@ -1,7 +1,9 @@
 {
-  "description": "Template for an internal bundle. Add only approved vendor files with exact SHA-256 values.",
+  "approved_fixture_manifests": [],
+  "description": "Adapter-only internal example. Use runtime-matrix.json.in only after substituting reviewed gateway build metadata.",
   "kind": "internal",
   "profile_id": "internal-example",
+  "runtimes": [],
   "schema_version": "1.0",
   "vendor_files": []
 }

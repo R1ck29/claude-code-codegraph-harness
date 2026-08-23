@@ -26,4 +26,11 @@ An internal release is a separate artifact assembled from an immutable public ta
 
 Never rebuild an already published internal version with different bytes. Increment the internal version instead.
 
+The internal runtime release must use the four-platform profile, but its public
+source release remains adapter-only. Record each gateway/backend executable hash,
+the compile-time fixture allowlist and matching runtime-profile value, selected
+endpoint pair, allowed root, managed Git identity, index manifest, and
+install→index→query→uninstall result. Do not publish a company-source runtime
+until the signed enterprise gate in `docs/internal-integration.md` passes.
+
 The endpoint must verify the complete ZIP against that separately stored hash or signature before extraction. `SHA256SUMS` is inside the ZIP and therefore cannot authenticate a fully replaced archive by itself.

@@ -9,7 +9,9 @@
     "profile_id",
     "kind",
     "description",
-    "vendor_files"
+    "approved_fixture_manifests",
+    "vendor_files",
+    "runtimes"
   ],
   "properties": {
     "schema_version": {
@@ -27,6 +29,14 @@
     },
     "description": {
       "type": "string"
+    },
+    "approved_fixture_manifests": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
     },
     "vendor_files": {
       "type": "array",
@@ -51,6 +61,21 @@
           }
         }
       }
+    },
+    "runtimes": {
+      "type": "array",
+      "anyOf": [
+        {
+          "maxItems": 0
+        },
+        {
+          "minItems": 4,
+          "maxItems": 4
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/runtime"
+      }
     }
   },
   "allOf": [
@@ -69,6 +94,29 @@
         "properties": {
           "vendor_files": {
             "maxItems": 0
+          },
+          "approved_fixture_manifests": {
+            "maxItems": 0
+          },
+          "runtimes": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "runtimes": {
+            "minItems": 1
+          }
+        },
+        "required": ["runtimes"]
+      },
+      "then": {
+        "properties": {
+          "approved_fixture_manifests": {
+            "minItems": 1
           }
         }
       }
@@ -79,6 +127,84 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "arch",
+        "files"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "macos",
+            "windows"
+          ]
+        },
+        "arch": {
+          "enum": [
+            "arm64",
+            "x86_64"
+          ]
+        },
+        "files": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/runtimeFile"
+          }
+        }
+      }
+    },
+    "runtimeFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component",
+        "source",
+        "target",
+        "sha256",
+        "version",
+        "commit",
+        "license",
+        "executable"
+      ],
+      "properties": {
+        "component": {
+          "enum": [
+            "gateway",
+            "backend"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "target": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "license": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$"
+        },
+        "executable": {
+          "const": true
+        }
+      }
     }
   }
 }

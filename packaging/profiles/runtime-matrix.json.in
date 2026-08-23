@@ -1,0 +1,130 @@
+{
+  "approved_fixture_manifests": ["__APPROVED_FIXTURE_MANIFEST_SHA256__"],
+  "description": "Four-platform offline runtime assembled only from pre-staged, hash-verified native executables.",
+  "kind": "internal",
+  "profile_id": "runtime-matrix",
+  "runtimes": [
+    {
+      "arch": "arm64",
+      "files": [
+        {
+          "commit": "__GATEWAY_COMMIT__",
+          "component": "gateway",
+          "executable": true,
+          "license": "Apache-2.0",
+          "sha256": "__GATEWAY_MACOS_ARM64_SHA256__",
+          "source": "macos-arm64/codegraph-gateway",
+          "target": "runtime/macos-arm64/bin/codegraph-gateway",
+          "version": "__GATEWAY_VERSION__"
+        },
+        {
+          "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+          "component": "backend",
+          "executable": true,
+          "license": "MIT",
+          "sha256": "2412e017268bef8f847f38d1b0f79f63185b38c27fe6fba637067bfc87c0eedf",
+          "source": "macos-arm64/codebase-memory-mcp",
+          "target": "runtime/macos-arm64/bin/codebase-memory-mcp",
+          "version": "0.10.8"
+        }
+      ],
+      "platform": "macos"
+    },
+    {
+      "arch": "x86_64",
+      "files": [
+        {
+          "commit": "__GATEWAY_COMMIT__",
+          "component": "gateway",
+          "executable": true,
+          "license": "Apache-2.0",
+          "sha256": "__GATEWAY_MACOS_X86_64_SHA256__",
+          "source": "macos-x86_64/codegraph-gateway",
+          "target": "runtime/macos-x86_64/bin/codegraph-gateway",
+          "version": "__GATEWAY_VERSION__"
+        },
+        {
+          "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+          "component": "backend",
+          "executable": true,
+          "license": "MIT",
+          "sha256": "1d5b79257d91973809ee70482781db3d1a78f62fc1cd5d18a5ab0608451d16d4",
+          "source": "macos-x86_64/codebase-memory-mcp",
+          "target": "runtime/macos-x86_64/bin/codebase-memory-mcp",
+          "version": "0.10.8"
+        }
+      ],
+      "platform": "macos"
+    },
+    {
+      "arch": "arm64",
+      "files": [
+        {
+          "commit": "__GATEWAY_COMMIT__",
+          "component": "gateway",
+          "executable": true,
+          "license": "Apache-2.0",
+          "sha256": "__GATEWAY_WINDOWS_ARM64_SHA256__",
+          "source": "windows-arm64/codegraph-gateway.exe",
+          "target": "runtime/windows-arm64/bin/codegraph-gateway.exe",
+          "version": "__GATEWAY_VERSION__"
+        },
+        {
+          "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+          "component": "backend",
+          "executable": true,
+          "license": "MIT",
+          "sha256": "67b0341ee62f07f850d3954e4f387855f90ea8c6c4b7ed41b8a62d61344373a4",
+          "source": "windows-arm64/codebase-memory-mcp.exe",
+          "target": "runtime/windows-arm64/bin/codebase-memory-mcp.exe",
+          "version": "0.10.8"
+        }
+      ],
+      "platform": "windows"
+    },
+    {
+      "arch": "x86_64",
+      "files": [
+        {
+          "commit": "__GATEWAY_COMMIT__",
+          "component": "gateway",
+          "executable": true,
+          "license": "Apache-2.0",
+          "sha256": "__GATEWAY_WINDOWS_X86_64_SHA256__",
+          "source": "windows-x86_64/codegraph-gateway.exe",
+          "target": "runtime/windows-x86_64/bin/codegraph-gateway.exe",
+          "version": "__GATEWAY_VERSION__"
+        },
+        {
+          "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+          "component": "backend",
+          "executable": true,
+          "license": "MIT",
+          "sha256": "b4b403b1d7c4def3785f148b93f345ce8427858f4f5489ce28580c4387a336a6",
+          "source": "windows-x86_64/codebase-memory-mcp.exe",
+          "target": "runtime/windows-x86_64/bin/codebase-memory-mcp.exe",
+          "version": "0.10.8"
+        }
+      ],
+      "platform": "windows"
+    }
+  ],
+  "schema_version": "1.0",
+  "vendor_files": [
+    {
+      "sha256": "1f58f9911dc5e3bcb96de28bb28e7b6bb7eb323952d29569c5d7214a152146bb",
+      "source": "legal/codebase-memory/LICENSE",
+      "target": "runtime/licenses/codebase-memory/LICENSE"
+    },
+    {
+      "sha256": "e7a63094936ada6ad063bea36b55495838b413c62e95137c1e0b798657ab8406",
+      "source": "legal/codebase-memory/THIRD_PARTY_NOTICES.md",
+      "target": "runtime/licenses/codebase-memory/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "sha256": "23f4deeec3d052ced9174d94b16d322ba4bafa8d3e9fd6a0fcc63f36dcd729c9",
+      "source": "legal/codebase-memory/sbom.json",
+      "target": "runtime/licenses/codebase-memory/sbom.json"
+    }
+  ]
+}

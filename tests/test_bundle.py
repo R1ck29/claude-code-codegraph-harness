@@ -27,6 +27,11 @@ class BundleBuilderTests(unittest.TestCase):
         self._write(".claude-plugin/marketplace.json", '{"name":"test"}\n')
         self._write("plugins/evaluator/plugin.json", "{}\n")
         self._write("rules/codegraph-harness.md", "# Company rule\n")
+        self._write("clients/routing-policy.json", '{"tools":[]}\n')
+        self._write("clients/render_adapters.py", "# renderer\n")
+        self._write("codex/.codex-plugin/plugin.json", '{"name":"test"}\n')
+        self._write("codex/skills/company-codegraph/SKILL.md", "# Company codegraph\n")
+        self._write("codex/config.example.toml", "[mcp_servers.company_codegraph]\n")
         self._write("installers/macos/install.sh", "#!/bin/sh\n")
         self._write("installers/macos/uninstall.sh", "#!/bin/sh\n")
         self._write("installers/windows/install.ps1", "Write-Output ok\n")
@@ -45,11 +50,60 @@ class BundleBuilderTests(unittest.TestCase):
             path.write_text(content, encoding="utf-8")
         return path
 
+    @staticmethod
+    def _write_vendor(root: Path, relative_path: str, content: bytes) -> Path:
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+        return path
+
+    @staticmethod
+    def _runtime_matrix() -> list[dict[str, object]]:
+        runtimes: list[dict[str, object]] = []
+        for platform, arch, suffix in (
+            ("macos", "arm64", ""),
+            ("macos", "x86_64", ""),
+            ("windows", "arm64", ".exe"),
+            ("windows", "x86_64", ".exe"),
+        ):
+            runtime_id = f"{platform}-{arch}"
+            runtimes.append(
+                {
+                    "platform": platform,
+                    "arch": arch,
+                    "files": [
+                        {
+                            "component": "gateway",
+                            "source": f"{runtime_id}/gateway{suffix}",
+                            "target": f"runtime/{runtime_id}/bin/codegraph-gateway{suffix}",
+                            "sha256": "1" * 64,
+                            "version": "1.0.0",
+                            "commit": "1" * 40,
+                            "license": "Apache-2.0",
+                            "executable": True,
+                        },
+                        {
+                            "component": "backend",
+                            "source": f"{runtime_id}/cbm{suffix}",
+                            "target": f"runtime/{runtime_id}/bin/codebase-memory-mcp{suffix}",
+                            "sha256": "2" * 64,
+                            "version": "0.10.8",
+                            "commit": "2" * 40,
+                            "license": "MIT",
+                            "executable": True,
+                        },
+                    ],
+                }
+            )
+        return runtimes
+
     def _profile(
         self,
         *,
         kind: str = "public",
         vendor_files: list[dict[str, str]] | None = None,
+        runtimes: list[dict[str, object]] | None = None,
+        approved_fixture_manifests: list[str] | None = None,
     ) -> Path:
         path = Path(self.temp_dir.name) / f"{kind}-profile.json"
         path.write_text(
@@ -59,7 +113,13 @@ class BundleBuilderTests(unittest.TestCase):
                     "profile_id": f"test-{kind}",
                     "kind": kind,
                     "description": "test profile",
+                    "approved_fixture_manifests": (
+                        approved_fixture_manifests
+                        if approved_fixture_manifests is not None
+                        else (["a" * 64] if kind == "internal" and runtimes else [])
+                    ),
                     "vendor_files": vendor_files or [],
+                    "runtimes": runtimes or [],
                 }
             ),
             encoding="utf-8",
@@ -98,6 +158,11 @@ class BundleBuilderTests(unittest.TestCase):
             self.assertIn("payload/marketplace/.claude-plugin/marketplace.json", names)
             self.assertIn("payload/marketplace/plugins/evaluator/plugin.json", names)
             self.assertIn("payload/rules/codegraph-harness.md", names)
+            self.assertIn("payload/clients/routing-policy.json", names)
+            self.assertIn("payload/clients/render_adapters.py", names)
+            self.assertIn("payload/codex/.codex-plugin/plugin.json", names)
+            self.assertIn("payload/codex/skills/company-codegraph/SKILL.md", names)
+            self.assertIn("payload/codex/config.example.toml", names)
             self.assertIn("THIRD_PARTY_NOTICES.md", names)
             self.assertIn("README-INSTALL.txt", names)
             self.assertNotIn("installers/macos/install.sh", names)
@@ -197,6 +262,267 @@ class BundleBuilderTests(unittest.TestCase):
                 archive.read("vendor/windows/tool.exe"), b"verified binary"
             )
             self.assertNotIn("not-listed.exe", archive.namelist())
+
+    def test_platform_runtime_is_deterministic_and_has_complete_metadata(self) -> None:
+        vendor_dir = Path(self.temp_dir.name) / "vendor"
+        vendor_dir.mkdir()
+        runtimes: list[dict[str, object]] = []
+        for platform, arch, executable_suffix in (
+            ("macos", "arm64", ""),
+            ("macos", "x86_64", ""),
+            ("windows", "arm64", ".exe"),
+            ("windows", "x86_64", ".exe"),
+        ):
+            runtime_id = f"{platform}-{arch}"
+            gateway_bytes = (
+                f"gateway {runtime_id} CODEGRAPH_APPROVED_FIXTURES:{'a' * 64}:END"
+            ).encode()
+            backend_bytes = f"backend {runtime_id}".encode()
+            gateway_source = f"{runtime_id}/gateway{executable_suffix}"
+            backend_source = f"{runtime_id}/cbm{executable_suffix}"
+            self._write_vendor(vendor_dir, gateway_source, gateway_bytes)
+            self._write_vendor(vendor_dir, backend_source, backend_bytes)
+            runtimes.append(
+                {
+                    "platform": platform,
+                    "arch": arch,
+                    "files": [
+                        {
+                            "component": "gateway",
+                            "source": gateway_source,
+                            "target": f"runtime/{runtime_id}/bin/codegraph-gateway{executable_suffix}",
+                            "sha256": _sha256(gateway_bytes),
+                            "version": "1.0.0",
+                            "commit": "1" * 40,
+                            "license": "Apache-2.0",
+                            "executable": True,
+                        },
+                        {
+                            "component": "backend",
+                            "source": backend_source,
+                            "target": f"runtime/{runtime_id}/bin/codebase-memory-mcp{executable_suffix}",
+                            "sha256": _sha256(backend_bytes),
+                            "version": "0.10.8",
+                            "commit": "2" * 40,
+                            "license": "MIT",
+                            "executable": True,
+                        },
+                    ],
+                }
+            )
+        profile = self._profile(kind="internal", runtimes=runtimes)
+        first = Path(self.temp_dir.name) / "runtime-one.zip"
+        second = Path(self.temp_dir.name) / "runtime-two.zip"
+
+        build_bundle(
+            self.root,
+            first,
+            version="2.0.0",
+            profile_path=profile,
+            vendor_dir=vendor_dir,
+        )
+        build_bundle(
+            self.root,
+            second,
+            version="2.0.0",
+            profile_path=profile,
+            vendor_dir=vendor_dir,
+        )
+
+        mismatched_profile = self._profile(
+            kind="internal",
+            runtimes=runtimes,
+            approved_fixture_manifests=["b" * 64],
+        )
+        with self.assertRaisesRegex(BundleError, "compile-time fixture allowlist"):
+            build_bundle(
+                self.root,
+                Path(self.temp_dir.name) / "mismatched-fixture.zip",
+                version="2.0.0",
+                profile_path=mismatched_profile,
+                vendor_dir=vendor_dir,
+            )
+
+        self.assertEqual(first.read_bytes(), second.read_bytes())
+        with zipfile.ZipFile(first) as archive:
+            self.assertEqual(
+                archive.read("runtime/macos-arm64/bin/codegraph-gateway"),
+                (
+                    f"gateway macos-arm64 CODEGRAPH_APPROVED_FIXTURES:{'a' * 64}:END"
+                ).encode(),
+            )
+            self.assertEqual(
+                archive.read("runtime/windows-x86_64/bin/codebase-memory-mcp.exe"),
+                b"backend windows-x86_64",
+            )
+            runtime_manifest = json.loads(archive.read("runtime/manifest.json"))
+            self.assertEqual(runtime_manifest["approved_fixture_manifests"], ["a" * 64])
+            self.assertEqual(
+                {
+                    (item["platform"], item["arch"])
+                    for item in runtime_manifest["runtimes"]
+                },
+                {
+                    ("macos", "arm64"),
+                    ("macos", "x86_64"),
+                    ("windows", "arm64"),
+                    ("windows", "x86_64"),
+                },
+            )
+            for runtime in runtime_manifest["runtimes"]:
+                self.assertEqual(
+                    {entry["component"] for entry in runtime["files"]},
+                    {"gateway", "backend"},
+                )
+                for entry in runtime["files"]:
+                    self.assertNotIn("source", entry)
+                    self.assertNotIn("download", entry)
+                    self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$")
+                    self.assertRegex(entry["commit"], r"^[0-9a-f]{40}$")
+                    self.assertTrue(entry["version"])
+                    self.assertTrue(entry["license"])
+                    self.assertTrue(entry["executable"])
+                    mode = archive.getinfo(entry["path"]).external_attr >> 16
+                    self.assertEqual(mode & 0o111, 0o111)
+
+            manifest = json.loads(archive.read("bundle-manifest.json"))
+            self.assertEqual(
+                {(item["platform"], item["arch"]) for item in manifest["runtimes"]},
+                {
+                    ("macos", "arm64"),
+                    ("macos", "x86_64"),
+                    ("windows", "arm64"),
+                    ("windows", "x86_64"),
+                },
+            )
+
+    def test_runtime_profile_requires_one_gateway_and_one_backend(self) -> None:
+        vendor_dir = Path(self.temp_dir.name) / "vendor"
+        vendor_dir.mkdir()
+        (vendor_dir / "gateway").write_bytes(b"gateway")
+        runtimes = self._runtime_matrix()
+        runtimes[-1]["files"] = [runtimes[-1]["files"][0]]  # type: ignore[index]
+        with self.assertRaisesRegex(BundleError, "gateway.*backend"):
+            build_bundle(
+                self.root,
+                Path(self.temp_dir.name) / "bad-runtime.zip",
+                version="1.0.0",
+                profile_path=self._profile(kind="internal", runtimes=runtimes),
+                vendor_dir=vendor_dir,
+            )
+
+    def test_runtime_profile_requires_a_compile_time_fixture_manifest(self) -> None:
+        profile = self._profile(
+            kind="internal",
+            runtimes=self._runtime_matrix(),
+            approved_fixture_manifests=[],
+        )
+        with self.assertRaisesRegex(BundleError, "approved fixture manifest"):
+            build_bundle(
+                self.root,
+                Path(self.temp_dir.name) / "unsafe-runtime.zip",
+                version="2.0.0",
+                profile_path=profile,
+                vendor_dir=Path(self.temp_dir.name) / "unused-vendor",
+            )
+
+    def test_public_profile_cannot_include_a_runtime(self) -> None:
+        runtime: dict[str, object] = {
+            "platform": "macos",
+            "arch": "arm64",
+            "files": [],
+        }
+        with self.assertRaisesRegex(BundleError, "public profile"):
+            build_bundle(
+                self.root,
+                Path(self.temp_dir.name) / "bad-public-runtime.zip",
+                version="1.0.0",
+                profile_path=self._profile(runtimes=[runtime]),
+            )
+
+    def test_internal_runtime_profile_requires_the_complete_platform_matrix(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(BundleError, "four OS/architecture"):
+            build_bundle(
+                self.root,
+                Path(self.temp_dir.name) / "partial-matrix.zip",
+                version="1.0.0",
+                profile_path=self._profile(
+                    kind="internal",
+                    runtimes=[{"platform": "macos", "arch": "arm64", "files": []}],
+                ),
+            )
+
+    def test_runtime_source_url_is_rejected(self) -> None:
+        runtimes = self._runtime_matrix()
+        runtimes[0]["files"][0]["source"] = "https://example.invalid/gateway"  # type: ignore[index]
+        with self.assertRaisesRegex(BundleError, "relative path"):
+            build_bundle(
+                self.root,
+                Path(self.temp_dir.name) / "url-runtime.zip",
+                version="1.0.0",
+                profile_path=self._profile(kind="internal", runtimes=runtimes),
+            )
+
+    def test_checked_in_runtime_template_is_offline_and_matches_backend_lock(
+        self,
+    ) -> None:
+        project_root = Path(__file__).resolve().parents[1]
+        template = json.loads(
+            (
+                project_root / "packaging" / "profiles" / "runtime-matrix.json.in"
+            ).read_text(encoding="utf-8")
+        )
+        lock = json.loads(
+            (project_root / "vendor" / "codebase-memory-v0.10.8.lock.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        locked = {
+            (
+                "macos" if artifact["platform"] == "darwin" else "windows",
+                (
+                    "x86_64"
+                    if artifact["architecture"] == "amd64"
+                    else artifact["architecture"]
+                ),
+            ): artifact["executable_sha256"]
+            for artifact in lock["artifacts"]
+        }
+        self.assertEqual(
+            {(item["platform"], item["arch"]) for item in template["runtimes"]},
+            set(locked),
+        )
+        serialized = json.dumps(template)
+        self.assertNotIn("https://", serialized)
+        self.assertNotIn("http://", serialized)
+        for runtime in template["runtimes"]:
+            backend = next(
+                item for item in runtime["files"] if item["component"] == "backend"
+            )
+            self.assertEqual(
+                backend["sha256"], locked[(runtime["platform"], runtime["arch"])]
+            )
+            self.assertEqual(backend["version"], lock["backend"]["version"])
+            self.assertEqual(backend["commit"], lock["backend"]["commit"])
+        self.assertEqual(
+            {(entry["target"], entry["sha256"]) for entry in template["vendor_files"]},
+            {
+                (
+                    "runtime/licenses/codebase-memory/LICENSE",
+                    "1f58f9911dc5e3bcb96de28bb28e7b6bb7eb323952d29569c5d7214a152146bb",
+                ),
+                (
+                    "runtime/licenses/codebase-memory/THIRD_PARTY_NOTICES.md",
+                    "e7a63094936ada6ad063bea36b55495838b413c62e95137c1e0b798657ab8406",
+                ),
+                (
+                    "runtime/licenses/codebase-memory/sbom.json",
+                    lock["release"]["sbom"]["sha256"],
+                ),
+            },
+        )
 
     def test_public_profile_cannot_inject_vendor_files(self) -> None:
         profile = self._profile(

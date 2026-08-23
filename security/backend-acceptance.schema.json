@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r1ck29.github.io/claude-code-codegraph-harness/security/backend-acceptance.schema.json",
+  "title": "Release-specific backend acceptance evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "recorded_at",
+    "backend",
+    "host",
+    "data_classification",
+    "checks",
+    "decision"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "evidence_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$"},
+    "recorded_at": {"type": "string", "format": "date"},
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "commit", "archive_sha256", "executable_sha256"],
+      "properties": {
+        "id": {"const": "codebase-memory"},
+        "version": {"const": "0.10.8"},
+        "commit": {"pattern": "^[0-9a-f]{40}$"},
+        "archive_sha256": {"pattern": "^[0-9a-f]{64}$"},
+        "executable_sha256": {"pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "architecture", "enterprise_policy"],
+      "properties": {
+        "os": {"enum": ["macos", "windows"]},
+        "architecture": {"enum": ["arm64", "amd64"]},
+        "enterprise_policy": {"type": "boolean"}
+      }
+    },
+    "data_classification": {"const": "public-fixture"},
+    "checks": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "evidence"],
+        "properties": {
+          "status": {"enum": ["pass", "fail", "unverified", "not_applicable"]},
+          "evidence": {"type": "string", "minLength": 1, "maxLength": 1024}
+        }
+      }
+    },
+    "decision": {"enum": ["public-fixture-only", "approved-for-company-source", "rejected"]}
+  }
+}

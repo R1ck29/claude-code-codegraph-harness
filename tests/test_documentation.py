@@ -11,6 +11,9 @@ from codegraph_harness.bundle import build_bundle
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 GUIDE_PATH = PROJECT_ROOT / "docs" / "how-it-works-ja.md"
+CLAUDE_EVIDENCE_PATH = (
+    PROJECT_ROOT / "docs" / "evidence" / "claude-v0.2.0-public-token-eval.md"
+)
 
 
 class DocumentationTests(unittest.TestCase):
@@ -60,6 +63,17 @@ class DocumentationTests(unittest.TestCase):
                     )
                 }
                 self.assertEqual(checksum_entries["HOW-IT-WORKS-JA.md"], guide_sha256)
+
+    def test_claude_evidence_is_linked_and_preserves_the_failed_cost_gate(self) -> None:
+        evidence = CLAUDE_EVIDENCE_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        guide = GUIDE_PATH.read_text(encoding="utf-8")
+
+        self.assertIn("claude-v0.2.0-public-token-eval.md", readme)
+        self.assertIn("claude-v0.2.0-public-token-eval.md", guide)
+        self.assertIn("111.61%", evidence)
+        self.assertIn("57.56%", evidence)
+        self.assertIn("does not authorize company-source use", evidence)
 
 
 if __name__ == "__main__":  # pragma: no cover

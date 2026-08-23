@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-code-codegraph-harness"
-version = "0.1.1"
-description = "Comparison and offline packaging harness for Claude Code code-graph backends"
+version = "0.2.0-rc.1"
+description = "Offline local codegraph gateway and evaluation harness for Claude Code and Codex"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
