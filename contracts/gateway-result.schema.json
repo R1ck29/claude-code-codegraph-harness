@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r1ck29.github.io/claude-code-codegraph-harness/contracts/gateway-result.schema.json",
+  "title": "Bounded codegraph gateway result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "freshness", "results", "page", "next_actions"],
+  "properties": {
+    "status": {"enum": ["success", "stale", "unavailable", "invalid_request", "error"]},
+    "summary": {"type": "string", "maxLength": 1024},
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usable", "reason", "generation"],
+      "properties": {
+        "usable": {"type": "boolean"},
+        "reason": {
+          "enum": [
+            "fresh",
+            "missing",
+            "incomplete",
+            "wrong_repository",
+            "commit_changed",
+            "worktree_dirty",
+            "backend_changed",
+            "gateway_changed",
+            "config_changed",
+            "schema_changed"
+          ]
+        },
+        "generation": {"type": ["string", "null"], "maxLength": 128}
+      }
+    },
+    "results": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["symbol_id", "name", "kind", "path", "line_start", "line_end", "relation", "evidence"],
+        "properties": {
+          "symbol_id": {"type": "string", "maxLength": 512},
+          "name": {"type": "string", "maxLength": 256},
+          "kind": {"type": "string", "maxLength": 64},
+          "path": {
+            "type": "string",
+            "maxLength": 1024,
+            "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]*$"
+          },
+          "line_start": {"type": "integer", "minimum": 1},
+          "line_end": {"type": "integer", "minimum": 1},
+          "relation": {
+            "enum": ["definition", "caller", "callee", "importer", "import", "reference", "test", "impact", "architecture"]
+          },
+          "evidence": {"type": "string", "maxLength": 512}
+        }
+      }
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["returned", "truncated", "next_cursor"],
+      "properties": {
+        "returned": {"type": "integer", "minimum": 0, "maximum": 50},
+        "truncated": {"type": "boolean"},
+        "next_cursor": {"type": ["string", "null"], "maxLength": 512}
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"type": "string", "maxLength": 256}
+    }
+  }
+}

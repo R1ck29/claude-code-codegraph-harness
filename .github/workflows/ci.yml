@@ -30,7 +30,7 @@ jobs:
       - name: Compile package
         run: python -m compileall -q src tests
       - name: Build public bundle
-        run: codegraph-harness bundle --version 0.1.1-ci --profile packaging/profiles/public.json --output dist/codegraph-harness-0.1.1-ci.zip
+        run: codegraph-harness bundle --version 0.2.0-rc.1-ci --profile packaging/profiles/public.json --output dist/codegraph-harness-0.2.0-rc.1-ci.zip
 
   plugin-validation:
     runs-on: ubuntu-latest
@@ -59,9 +59,46 @@ jobs:
       - name: Install development checks
         run: python -m pip install --disable-pip-version-check -e ".[dev]"
       - name: Check formatting
-        run: black --check src tests
+        run: black --check src tests clients
       - name: Check types
-        run: mypy --strict src
+        run: mypy --strict src clients
+
+  go-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: gateway/go.mod
+          cache-dependency-path: gateway/go.mod
+      - name: Test, vet, and race-check gateway
+        working-directory: gateway
+        run: |
+          go test ./...
+          go vet ./...
+          go test -race ./...
+      - name: Cross-build supported gateway targets
+        working-directory: gateway
+        run: |
+          mkdir -p "${RUNNER_TEMP}/codegraph-gateway"
+          GOOS=darwin GOARCH=amd64 go build -trimpath -o "${RUNNER_TEMP}/codegraph-gateway/darwin-amd64" ./cmd/codegraph-gateway
+          GOOS=darwin GOARCH=arm64 go build -trimpath -o "${RUNNER_TEMP}/codegraph-gateway/darwin-arm64" ./cmd/codegraph-gateway
+          GOOS=windows GOARCH=amd64 go build -trimpath -o "${RUNNER_TEMP}/codegraph-gateway/windows-amd64.exe" ./cmd/codegraph-gateway
+          GOOS=windows GOARCH=arm64 go build -trimpath -o "${RUNNER_TEMP}/codegraph-gateway/windows-arm64.exe" ./cmd/codegraph-gateway
+
+  windows-process-tree:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: gateway/go.mod
+          cache-dependency-path: gateway/go.mod
+      - name: Prove Windows Job Object terminates backend descendants
+        working-directory: gateway
+        run: |
+          go test ./internal/gateway -run TestCBMCloseTerminatesTheCompleteProcessTreeAndIsIdempotent -count=1 -v
+          go test ./cmd/codegraph-gateway -run TestIndexLockIsExclusiveAndAutomaticallyRecoverable -count=1 -v
 
   shell-safety:
     runs-on: ubuntu-latest

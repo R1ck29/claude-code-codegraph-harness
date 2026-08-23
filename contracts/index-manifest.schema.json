@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r1ck29.github.io/claude-code-codegraph-harness/contracts/index-manifest.schema.json",
+  "title": "Codegraph index freshness manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generation",
+    "status",
+    "gateway",
+    "backend",
+    "repository_identity_sha256",
+    "indexed_commit",
+    "dirty",
+    "config_sha256",
+    "file_manifest_sha256",
+    "built_at",
+    "duration_ms",
+    "counts"
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "sha256"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {"const": 1},
+    "generation": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$"
+    },
+    "status": {"enum": ["complete", "degraded", "failed"]},
+    "gateway": {"$ref": "#/$defs/artifact"},
+    "backend": {
+      "allOf": [
+        {"$ref": "#/$defs/artifact"},
+        {"required": ["id"]}
+      ]
+    },
+    "repository_identity_sha256": {"$ref": "#/$defs/sha256"},
+    "indexed_commit": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "dirty": {"const": false},
+    "config_sha256": {"$ref": "#/$defs/sha256"},
+    "file_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "built_at": {"type": "string", "format": "date-time"},
+    "duration_ms": {"type": "integer", "minimum": 0},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "files",
+        "nodes",
+        "edges",
+        "parse_failures",
+        "skipped_files",
+        "unsupported_languages"
+      ],
+      "properties": {
+        "files": {"type": "integer", "minimum": 0},
+        "nodes": {"type": "integer", "minimum": 0},
+        "edges": {"type": "integer", "minimum": 0},
+        "parse_failures": {"type": "integer", "minimum": 0},
+        "skipped_files": {"type": "integer", "minimum": 0},
+        "unsupported_languages": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "maxLength": 64}
+        }
+      }
+    }
+  }
+}

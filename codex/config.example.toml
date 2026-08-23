@@ -1,0 +1,26 @@
+# Installer template: replace this token with the absolute path of the local
+# codegraph-gateway executable. Never point this configuration at an upstream
+# backend executable.
+[mcp_servers.company_codegraph]
+command = "__CODEGRAPH_GATEWAY_COMMAND__"
+args = [
+  "serve",
+  "--allowed-root", "__CODEGRAPH_ALLOWED_ROOT__",
+  "--data-classification", "public-fixture",
+  "--state-dir", "__CODEGRAPH_STATE_DIRECTORY__",
+  "--cbm-binary", "__CODEGRAPH_BACKEND_COMMAND__",
+  "--backend-sha256", "__CODEGRAPH_BACKEND_SHA256__",
+  "--config", "__CODEGRAPH_CONFIG_FILE__",
+  "--config-sha256", "__CODEGRAPH_CONFIG_SHA256__",
+  "--git-binary", "__CODEGRAPH_GIT_COMMAND__",
+  "--git-sha256", "__CODEGRAPH_GIT_SHA256__"
+]
+enabled_tools = [
+  "codegraph_status",
+  "codegraph_search",
+  "codegraph_neighbors",
+  "codegraph_impact",
+  "codegraph_architecture"
+]
+required = true
+default_tools_approval_mode = "approve"

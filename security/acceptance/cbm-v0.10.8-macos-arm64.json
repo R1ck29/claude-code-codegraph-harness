@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "evidence_id": "cbm-v0.10.8-macos-arm64-20260823",
+  "recorded_at": "2026-08-23",
+  "backend": {
+    "id": "codebase-memory",
+    "version": "0.10.8",
+    "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+    "archive_sha256": "9bd840dfb3ec7eaef4f310382057adaa5b0e904df883104d03ffcf39836afd07",
+    "executable_sha256": "2412e017268bef8f847f38d1b0f79f63185b38c27fe6fba637067bfc87c0eedf"
+  },
+  "host": {
+    "os": "macos",
+    "architecture": "arm64",
+    "enterprise_policy": false
+  },
+  "data_classification": "public-fixture",
+  "checks": {
+    "archive_hash": {
+      "status": "pass",
+      "evidence": "Downloaded release archive matched the GitHub release digest."
+    },
+    "executable_hash": {
+      "status": "pass",
+      "evidence": "Extracted native executable matched the recorded SHA-256."
+    },
+    "external_network_deny": {
+      "status": "pass",
+      "evidence": "macOS sandbox denied network operations except the backend's private Unix-domain-socket directory; indexing and queries still completed."
+    },
+    "index_and_read_queries": {
+      "status": "pass",
+      "evidence": "A disposable public fixture produced 759 nodes and 1,760 edges; exact search, inbound trace, and architecture queries completed."
+    },
+    "ui_watch_auto_index_disabled": {
+      "status": "pass",
+      "evidence": "The isolated cache was configured with ui_enabled=false, auto_watch=false, and auto_index=false before indexing."
+    },
+    "filesystem_isolation": {
+      "status": "unverified",
+      "evidence": "The test did not prove that unrelated user files were invisible to the backend process."
+    },
+    "enterprise_process_tree_policy": {
+      "status": "unverified",
+      "evidence": "No enterprise EDR or managed firewall policy was available on this host."
+    },
+    "windows_runtime": {
+      "status": "unverified",
+      "evidence": "Windows amd64 and arm64 binaries were hash-checked but not executed."
+    },
+    "client_token_reduction": {
+      "status": "fail",
+      "evidence": "Codex repeated public-fixture comparisons preserved bounded oracle quality but increased median input tokens by 48.00% to 52.15%; Claude bare-mode comparison remains blocked by missing approved credentials."
+    }
+  },
+  "decision": "public-fixture-only"
+}

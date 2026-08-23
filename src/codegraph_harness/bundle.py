@@ -1,4 +1,4 @@
-"""Build deterministic, reviewable Claude Code harness distribution bundles.
+"""Build deterministic, reviewable Claude Code and Codex harness bundles.
 
 The public bundle is assembled only from repository-owned text/configuration
 assets.  An internal profile may add pre-staged vendor files, but every such
@@ -22,10 +22,14 @@ import zipfile
 
 SCHEMA_VERSION = "1.0"
 _ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+_FIXTURE_RECORD_PATTERN = re.compile(rb"CODEGRAPH_APPROVED_FIXTURES:[0-9a-f,]*:END")
+_EMPTY_FIXTURE_RECORD = b"CODEGRAPH_APPROVED_FIXTURES::END"
 _DIRECTORY_MAPPINGS = (
     (".claude-plugin", "payload/marketplace/.claude-plugin"),
     ("plugins", "payload/marketplace/plugins"),
     ("rules", "payload/rules"),
+    ("clients", "payload/clients"),
+    ("codex", "payload/codex"),
 )
 _FILE_MAPPINGS = (
     ("installers/macos/install.sh", "install.sh"),
@@ -85,6 +89,16 @@ _GENERATED_PATHS = frozenset(
 _VERSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _PROFILE_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+_SPDX_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+-]*$")
+_RUNTIME_MATRIX = frozenset(
+    {
+        ("macos", "arm64"),
+        ("macos", "x86_64"),
+        ("windows", "arm64"),
+        ("windows", "x86_64"),
+    }
+)
 _WINDOWS_RESERVED_NAMES = frozenset(
     {
         "CON",
@@ -217,7 +231,9 @@ def _load_profile(profile_path: Path) -> dict[str, Any]:
         "profile_id",
         "kind",
         "description",
+        "approved_fixture_manifests",
         "vendor_files",
+        "runtimes",
     }
     unknown = sorted(set(raw) - allowed_keys)
     if unknown:
@@ -233,11 +249,58 @@ def _load_profile(profile_path: Path) -> dict[str, Any]:
     description = raw.get("description")
     if not isinstance(description, str):
         raise BundleError("profile description must be a string")
+    approved_fixture_manifests = raw.get("approved_fixture_manifests")
+    if not isinstance(approved_fixture_manifests, list):
+        raise BundleError("profile approved_fixture_manifests must be an array")
+    normalized_fixture_manifests: list[str] = []
+    for index, digest in enumerate(approved_fixture_manifests):
+        if not isinstance(digest, str) or not _SHA256_PATTERN.fullmatch(digest):
+            raise BundleError(
+                f"approved_fixture_manifests[{index}] must be a lowercase SHA-256"
+            )
+        if digest in normalized_fixture_manifests:
+            raise BundleError("approved fixture manifests must be unique")
+        normalized_fixture_manifests.append(digest)
+    normalized_fixture_manifests.sort()
+    if kind == "public" and normalized_fixture_manifests:
+        raise BundleError("public adapter profile must not approve a native fixture")
     vendor_files = raw.get("vendor_files")
     if not isinstance(vendor_files, list):
         raise BundleError("profile vendor_files must be an array")
     if kind == "public" and vendor_files:
         raise BundleError("public profile must not enumerate vendor files")
+
+    runtimes = raw.get("runtimes", [])
+    if not isinstance(runtimes, list):
+        raise BundleError("profile runtimes must be an array")
+    if kind == "public" and runtimes:
+        raise BundleError("public profile must not enumerate a runtime")
+    runtime_pairs: list[tuple[str, str]] = []
+    for index, runtime in enumerate(runtimes):
+        if not isinstance(runtime, dict):
+            raise BundleError(f"runtimes[{index}] must be an object")
+        platform = runtime.get("platform")
+        arch = runtime.get("arch")
+        if (
+            not isinstance(platform, str)
+            or not isinstance(arch, str)
+            or (platform, arch) not in _RUNTIME_MATRIX
+        ):
+            raise BundleError(
+                f"runtimes[{index}] has unsupported platform/arch: {platform}/{arch}"
+            )
+        runtime_pairs.append((platform, arch))
+    if runtimes and (
+        len(runtime_pairs) != len(_RUNTIME_MATRIX)
+        or set(runtime_pairs) != _RUNTIME_MATRIX
+    ):
+        raise BundleError(
+            "runtime profile must contain exactly the four OS/architecture variants"
+        )
+    if runtimes and not normalized_fixture_manifests:
+        raise BundleError(
+            "runtime profile must contain at least one compile-time approved fixture manifest"
+        )
 
     normalized_vendor_files: list[dict[str, str]] = []
     for index, entry in enumerate(vendor_files):
@@ -261,12 +324,107 @@ def _load_profile(profile_path: Path) -> dict[str, Any]:
         )
 
     normalized_vendor_files.sort(key=lambda item: (item["target"], item["source"]))
+    normalized_runtimes: list[dict[str, Any]] = []
+    for index, runtime in enumerate(runtimes):
+        allowed_runtime_keys = {"platform", "arch", "files"}
+        unknown_runtime_keys = sorted(set(runtime) - allowed_runtime_keys)
+        if unknown_runtime_keys:
+            raise BundleError(
+                f"runtimes[{index}] contains unknown fields: "
+                + ", ".join(unknown_runtime_keys)
+            )
+        files = runtime.get("files")
+        if not isinstance(files, list):
+            raise BundleError(f"runtimes[{index}].files must be an array")
+        platform = runtime["platform"]
+        arch = runtime["arch"]
+        runtime_id = f"{platform}-{arch}"
+        executable_suffix = ".exe" if platform == "windows" else ""
+        expected_targets = {
+            "gateway": (
+                f"runtime/{runtime_id}/bin/codegraph-gateway{executable_suffix}"
+            ),
+            "backend": (
+                f"runtime/{runtime_id}/bin/codebase-memory-mcp{executable_suffix}"
+            ),
+        }
+        components: dict[str, dict[str, Any]] = {}
+        for file_index, entry in enumerate(files):
+            field = f"runtimes[{index}].files[{file_index}]"
+            expected_keys = {
+                "component",
+                "source",
+                "target",
+                "sha256",
+                "version",
+                "commit",
+                "license",
+                "executable",
+            }
+            if not isinstance(entry, dict) or set(entry) != expected_keys:
+                raise BundleError(
+                    f"{field} must contain only component, source, target, sha256, "
+                    "version, commit, license, and executable"
+                )
+            component = entry["component"]
+            if component not in expected_targets or component in components:
+                raise BundleError(
+                    f"{field}.component must provide one gateway and one backend"
+                )
+            source = _validated_relative_path(entry["source"], field=f"{field}.source")
+            target = _validated_relative_path(entry["target"], field=f"{field}.target")
+            if target != expected_targets[component]:
+                raise BundleError(
+                    f"{field}.target must be {expected_targets[component]!r}"
+                )
+            sha256 = entry["sha256"]
+            if not isinstance(sha256, str) or not _SHA256_PATTERN.fullmatch(sha256):
+                raise BundleError(f"{field}.sha256 must be a lowercase SHA-256")
+            version = entry["version"]
+            if not isinstance(version, str) or not _VERSION_PATTERN.fullmatch(version):
+                raise BundleError(f"{field}.version is invalid")
+            commit = entry["commit"]
+            if not isinstance(commit, str) or not _COMMIT_PATTERN.fullmatch(commit):
+                raise BundleError(f"{field}.commit must be a 40-character commit hash")
+            license_id = entry["license"]
+            if not isinstance(license_id, str) or not _SPDX_PATTERN.fullmatch(
+                license_id
+            ):
+                raise BundleError(f"{field}.license must be an SPDX identifier")
+            if entry["executable"] is not True:
+                raise BundleError(f"{field}.executable must be true")
+            components[component] = {
+                "component": component,
+                "source": source,
+                "target": target,
+                "sha256": sha256,
+                "version": version,
+                "commit": commit,
+                "license": license_id,
+                "executable": True,
+            }
+        if set(components) != {"gateway", "backend"}:
+            raise BundleError(
+                f"runtimes[{index}] must provide exactly one gateway and one backend"
+            )
+        normalized_runtimes.append(
+            {
+                "platform": platform,
+                "arch": arch,
+                "files": [
+                    components[component] for component in ("gateway", "backend")
+                ],
+            }
+        )
+    normalized_runtimes.sort(key=lambda item: (item["platform"], item["arch"]))
     return {
         "schema_version": SCHEMA_VERSION,
         "profile_id": profile_id,
         "kind": kind,
         "description": description,
+        "approved_fixture_manifests": normalized_fixture_manifests,
         "vendor_files": normalized_vendor_files,
+        "runtimes": normalized_runtimes,
     }
 
 
@@ -388,6 +546,83 @@ def _vendor_entries(
         yield entry["target"], data
 
 
+def _runtime_entries(
+    profile: Mapping[str, Any], vendor_dir: Path | None
+) -> Iterable[tuple[str, bytes, bool]]:
+    runtimes = profile["runtimes"]
+    if not runtimes:
+        return
+    if vendor_dir is None:
+        raise BundleError(
+            "vendor_dir is required when an internal profile lists runtimes"
+        )
+    if vendor_dir.is_symlink():
+        raise BundleError(f"vendor_dir must not be a symlink: {vendor_dir}")
+    try:
+        vendor_root = vendor_dir.resolve(strict=True)
+    except (FileNotFoundError, OSError) as error:
+        raise BundleError(f"vendor_dir does not exist: {vendor_dir}") from error
+    if not vendor_root.is_dir():
+        raise BundleError(f"vendor_dir must be a directory: {vendor_dir}")
+
+    for runtime in runtimes:
+        for entry in runtime["files"]:
+            source_path = vendor_root.joinpath(*PurePosixPath(entry["source"]).parts)
+            data = _read_regular_file(
+                source_path, boundary=vendor_root, label="runtime source"
+            )
+            actual_digest = _digest(data)
+            if actual_digest != entry["sha256"]:
+                raise BundleError(
+                    "runtime hash mismatch for "
+                    f"{entry['source']!r}: expected {entry['sha256']}, got {actual_digest}"
+                )
+            if entry["component"] == "gateway":
+                expected_record = (
+                    "CODEGRAPH_APPROVED_FIXTURES:"
+                    + ",".join(profile["approved_fixture_manifests"])
+                    + ":END"
+                ).encode("ascii")
+                embedded_records = set(_FIXTURE_RECORD_PATTERN.findall(data))
+                if expected_record not in embedded_records or any(
+                    record not in {expected_record, _EMPTY_FIXTURE_RECORD}
+                    for record in embedded_records
+                ):
+                    raise BundleError(
+                        "gateway compile-time fixture allowlist does not match "
+                        "profile approved_fixture_manifests"
+                    )
+            yield entry["target"], data, entry["executable"]
+
+
+def _runtime_manifest(profile: Mapping[str, Any]) -> dict[str, Any] | None:
+    if not profile["runtimes"]:
+        return None
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "approved_fixture_manifests": profile["approved_fixture_manifests"],
+        "runtimes": [
+            {
+                "platform": runtime["platform"],
+                "arch": runtime["arch"],
+                "files": [
+                    {
+                        "component": entry["component"],
+                        "path": entry["target"],
+                        "sha256": entry["sha256"],
+                        "version": entry["version"],
+                        "commit": entry["commit"],
+                        "license": entry["license"],
+                        "executable": entry["executable"],
+                    }
+                    for entry in runtime["files"]
+                ],
+            }
+            for runtime in profile["runtimes"]
+        ],
+    }
+
+
 def _manifest(
     entries: Mapping[str, tuple[bytes, str]],
     *,
@@ -406,7 +641,7 @@ def _manifest(
     return {
         "schema_version": SCHEMA_VERSION,
         "status": "success",
-        "summary": "Deterministic Claude Code harness bundle assembled and verified.",
+        "summary": "Deterministic dual-client codegraph harness bundle assembled and verified.",
         "next_actions": [
             "Verify every entry against SHA256SUMS after transfer.",
             "Follow README-INSTALL.txt for the target operating system.",
@@ -417,20 +652,42 @@ def _manifest(
             "profile_id": profile["profile_id"],
             "kind": profile["kind"],
         },
+        "runtimes": [
+            {
+                "platform": runtime["platform"],
+                "arch": runtime["arch"],
+                "gateway_sha256": next(
+                    entry["sha256"]
+                    for entry in runtime["files"]
+                    if entry["component"] == "gateway"
+                ),
+                "backend_sha256": next(
+                    entry["sha256"]
+                    for entry in runtime["files"]
+                    if entry["component"] == "backend"
+                ),
+            }
+            for runtime in profile["runtimes"]
+        ],
     }
 
 
-def _zip_info(path: str) -> zipfile.ZipInfo:
+def _zip_info(path: str, *, executable: bool = False) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(path, date_time=_ZIP_TIMESTAMP)
     info.create_system = 3
     info.compress_type = zipfile.ZIP_DEFLATED
     info.flag_bits = 0x800
-    mode = 0o755 if path.endswith((".sh", ".command")) else 0o644
+    mode = 0o755 if executable or path.endswith((".sh", ".command")) else 0o644
     info.external_attr = (stat.S_IFREG | mode) << 16
     return info
 
 
-def _write_zip(output_path: Path, entries: Mapping[str, bytes]) -> None:
+def _write_zip(
+    output_path: Path,
+    entries: Mapping[str, bytes],
+    *,
+    executable_paths: frozenset[str] = frozenset(),
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_name: str | None = None
     try:
@@ -450,7 +707,7 @@ def _write_zip(output_path: Path, entries: Mapping[str, bytes]) -> None:
         ) as archive:
             for path in sorted(entries):
                 archive.writestr(
-                    _zip_info(path),
+                    _zip_info(path, executable=path in executable_paths),
                     entries[path],
                     compress_type=zipfile.ZIP_DEFLATED,
                     compresslevel=9,
@@ -492,6 +749,7 @@ def build_bundle(
     vendor_path = Path(vendor_dir) if vendor_dir is not None else None
 
     entries: dict[str, tuple[bytes, str]] = {}
+    executable_paths: set[str] = set()
     collision_keys: dict[str, str] = {}
     for generated_path in _GENERATED_PATHS:
         collision_keys[_collision_key(generated_path)] = generated_path
@@ -512,6 +770,26 @@ def build_bundle(
             data=data,
             source="vendor",
         )
+    for target, data, executable in _runtime_entries(profile, vendor_path):
+        _add_entry(
+            entries,
+            collision_keys,
+            target=target,
+            data=data,
+            source="runtime",
+        )
+        if executable:
+            executable_paths.add(target)
+
+    runtime_manifest = _runtime_manifest(profile)
+    if runtime_manifest is not None:
+        _add_entry(
+            entries,
+            collision_keys,
+            target="runtime/manifest.json",
+            data=_json_bytes(runtime_manifest),
+            source="generated",
+        )
 
     version_data = f"{version}\n".encode("utf-8")
     profile_data = _json_bytes(profile)
@@ -527,7 +805,7 @@ def build_bundle(
     zip_entries["SHA256SUMS"] = sums
 
     output = Path(output_path).resolve()
-    _write_zip(output, zip_entries)
+    _write_zip(output, zip_entries, executable_paths=frozenset(executable_paths))
     bundle_data = output.read_bytes()
     return {
         "status": "success",

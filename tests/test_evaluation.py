@@ -20,6 +20,7 @@ except ImportError:  # Optional contract-validation dependency.
 from codegraph_harness.evaluation import (
     EvaluationConfigError,
     normalize_claude_output,
+    normalize_codex_output,
     render_command,
     run_evaluation,
     run_evaluation_cli,
@@ -40,6 +41,40 @@ def _claude_command() -> list[str]:
         "sys.exit(9 if prompt == 'fail-secret' else 0)"
     )
     return [sys.executable, "-c", script]
+
+
+def _codex_command(*, graph: bool) -> list[str]:
+    command = [
+        "codex",
+        "exec",
+        "--json",
+        "--ephemeral",
+        "--ignore-user-config",
+        "--strict-config",
+        "--sandbox",
+        "read-only",
+        "-C",
+        "{repo}",
+    ]
+    if graph:
+        command.extend(
+            [
+                "-c",
+                'mcp_servers.company_codegraph.command="/managed/codegraph-gateway"',
+                "-c",
+                'mcp_servers.company_codegraph.args=["serve"]',
+                "-c",
+                "mcp_servers.company_codegraph.enabled_tools="
+                '["codegraph_status","codegraph_search","codegraph_neighbors",'
+                '"codegraph_impact","codegraph_architecture"]',
+                "-c",
+                "mcp_servers.company_codegraph.required=true",
+                "-c",
+                'mcp_servers.company_codegraph.default_tools_approval_mode="approve"',
+            ]
+        )
+    command.append("-")
+    return command
 
 
 class RenderingTests(unittest.TestCase):
@@ -133,13 +168,201 @@ class ClaudeOutputTests(unittest.TestCase):
                     "output_tokens": None,
                     "cache_creation_input_tokens": None,
                     "cache_read_input_tokens": None,
+                    "cached_input_tokens": None,
+                    "cache_write_input_tokens": None,
+                    "reasoning_output_tokens": None,
                 },
                 "cost_usd": None,
             },
         )
 
 
+class CodexOutputTests(unittest.TestCase):
+    def test_normalizes_usage_and_only_records_mcp_names(self) -> None:
+        raw = "\n".join(
+            [
+                json.dumps({"type": "turn.started"}),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "id": "item_1",
+                            "type": "mcp_tool_call",
+                            "server": "company_codegraph",
+                            "tool": "codegraph_search",
+                            "arguments": {"query": "sensitive query"},
+                            "result": {"content": "sensitive source"},
+                            "error": None,
+                            "status": "completed",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "id": "item_2",
+                            "type": "agent_message",
+                            "text": "src/codegraph_harness/bundle.py",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "turn.completed",
+                        "usage": {
+                            "input_tokens": 105,
+                            "cached_input_tokens": 80,
+                            "cache_write_input_tokens": 2,
+                            "output_tokens": 17,
+                            "reasoning_output_tokens": 3,
+                        },
+                    }
+                ),
+            ]
+        )
+
+        normalized = normalize_codex_output(raw)
+
+        self.assertEqual(normalized["usage"]["input_tokens"], 105)
+        self.assertEqual(normalized["usage"]["cached_input_tokens"], 80)
+        self.assertEqual(normalized["usage"]["reasoning_output_tokens"], 3)
+        self.assertEqual(
+            normalized["tool_calls"],
+            {
+                "available": True,
+                "count": 1,
+                "by_tool": {"company_codegraph.codegraph_search": 1},
+            },
+        )
+        self.assertEqual(normalized["final_text"], "src/codegraph_harness/bundle.py")
+        serialized = json.dumps(normalized)
+        self.assertNotIn("sensitive query", serialized)
+        self.assertNotIn("sensitive source", serialized)
+
+    def test_malformed_mcp_item_makes_count_unavailable(self) -> None:
+        raw = "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {"type": "mcp_tool_call", "arguments": {}},
+                    }
+                ),
+                json.dumps({"type": "turn.completed", "usage": {}}),
+            ]
+        )
+        self.assertEqual(
+            normalize_codex_output(raw)["tool_calls"],
+            {"available": False, "count": None, "by_tool": {}},
+        )
+
+
 class EvaluationRunnerTests(unittest.TestCase):
+    def test_codex_graph_condition_records_oracle_without_final_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_path = Path(temporary_directory)
+            repo = temporary_path / "repo"
+            repo.mkdir()
+            harness = temporary_path / "harness"
+            harness.mkdir()
+            tasks = temporary_path / "tasks.json"
+            conditions = temporary_path / "conditions.json"
+            _write_json(
+                tasks,
+                {
+                    "schema_version": 1,
+                    "tasks": [
+                        {
+                            "id": "find-entry",
+                            "prompt": "Find the entry point.",
+                            "oracle": {
+                                "required_substrings": [
+                                    "src/codegraph_harness/bundle.py"
+                                ],
+                                "forbidden_substrings": ["outside/repository.py"],
+                            },
+                        }
+                    ],
+                },
+            )
+            _write_json(
+                conditions,
+                {
+                    "schema_version": 1,
+                    "conditions": [
+                        {
+                            "id": "codex-graph-gateway",
+                            "client": "codex",
+                            "variant": "graph-gateway",
+                            "allowed_data_classifications": ["public-fixture"],
+                            "command": _codex_command(graph=True),
+                        }
+                    ],
+                },
+            )
+            stdout = "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "id": "tool",
+                                "type": "mcp_tool_call",
+                                "server": "company_codegraph",
+                                "tool": "codegraph_search",
+                                "arguments": {"query": "must not persist"},
+                                "result": {"content": "must not persist"},
+                                "error": None,
+                                "status": "completed",
+                            },
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "id": "answer",
+                                "type": "agent_message",
+                                "text": "src/codegraph_harness/bundle.py",
+                            },
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "turn.completed",
+                            "usage": {
+                                "input_tokens": 20,
+                                "cached_input_tokens": 5,
+                                "output_tokens": 3,
+                                "reasoning_output_tokens": 1,
+                            },
+                        }
+                    ),
+                ]
+            )
+            with patch("codegraph_harness.evaluation.subprocess.run") as mocked_run:
+                mocked_run.return_value.returncode = 0
+                mocked_run.return_value.stdout = stdout
+                mocked_run.return_value.stderr = ""
+                result = run_evaluation(
+                    tasks_path=tasks,
+                    conditions_path=conditions,
+                    repo=repo,
+                    harness_root=harness,
+                    output_dir=temporary_path / "output",
+                    data_classification="public-fixture",
+                )
+
+        run = result["runs"][0]
+        self.assertEqual(run["client"], "codex")
+        self.assertEqual(run["variant"], "graph-gateway")
+        self.assertTrue(run["oracle"]["passed"])
+        self.assertEqual(run["tool_calls"]["count"], 1)
+        serialized = json.dumps(result)
+        self.assertNotIn("must not persist", serialized)
+        self.assertNotIn("src/codegraph_harness/bundle.py", serialized)
+
     def test_failure_does_not_stop_later_tasks_and_sensitive_values_are_hashed(
         self,
     ) -> None:

@@ -1,71 +1,134 @@
 # Internal harness integration
 
-This repository is an extension source, not a replacement for an existing company harness.
+This repository extends an existing Plugin-plus-scripted-Rules harness; it does
+not replace or merge with it.
 
-## Inputs from the company pipeline
+## Release status
 
-The internal assembly job must provide, outside this repository:
+`v0.2.0-rc.1` contains the complete gateway source and adapter/packaging logic,
+but is authorized only for public fixtures. Observed Codex graph conditions
+increased median input tokens by 48–52%; forced Claude graph use increased
+median effective input by 58–112%. Enterprise Windows/macOS isolation
+evidence is incomplete. Do not present this release as a cost-reduction feature
+or point its allowed root at company source.
 
-- the approved public tag and commit;
-- an install profile with exact artifact hashes;
-- approved backend artifacts from an internal mirror, if a backend has passed evaluation;
-- any private Rules and organization-specific managed settings;
-- signing and software-portal publishing credentials.
+## Inputs owned by the internal pipeline
 
-The builder reads vendor files only when they are explicitly listed in the install profile. It never discovers or downloads vendor files. Repository-owned plugin, Rule, installer, license, and installation-guide assets are included through fixed mappings in the builder.
+- immutable public tag and commit;
+- four reviewed gateway build outputs;
+- Codebase-Memory v0.10.8 native executables from an internal mirror;
+- exact archive/executable hashes, provenance, license, SBOM, and malware result;
+- completed runtime profile derived from `runtime-matrix.json.in`;
+- organization-specific Rule/policy overlays kept outside this repository;
+- signing credentials and the software-portal release record.
 
-## Recommended integration sequence
+Never send internal profiles, paths, Rules, evaluation data, graphs, prompts, or
+logs back to GitHub or another external service. Use an internal mirror and
+one-way import when the pipeline cannot technically enforce that boundary.
 
-1. Verify the public tag, commit, and CI result.
-2. Re-run the repository tests in the internal build environment.
-3. Stage approved vendor files in a clean directory.
-4. Create a private profile from `packaging/profiles/internal.example.json` and record each relative source, bundle target, and SHA-256.
-5. Build the ZIP with `codegraph-harness bundle`.
-6. Secret-scan and malware-scan the ZIP, then sign it or publish its SHA-256 through a channel separate from the ZIP; archive the ZIP, verification value, and manifest.
-7. Exercise install, reinstall, upgrade, rollback, and uninstall on the supported Windows/macOS matrix.
-8. Publish the exact tested ZIP through the internal software portal.
+## Assembly sequence
 
-The assembly environment may import approved public artifacts, but it must never publish internal profiles, Rules, evaluation data, source-derived graphs, paths, or logs back to GitHub or another external service. Run internal CI from an internal mirror when the build system cannot enforce one-way artifact import.
+1. Verify the public tag, commit signature/policy, and public CI result.
+2. Re-run Python, Go, Plugin, installer, schema, and archive tests internally.
+3. Compute the exact clean public-fixture content manifest with `fixture
+   fingerprint`, then build `codegraph-gateway` with `-trimpath` and
+   `-ldflags "-X main.allowedFixtureManifests=CODEGRAPH_APPROVED_FIXTURES:<manifest>:END"`
+   for darwin/windows
+   and arm64/amd64; record every command, hash, manifest, and source commit. A
+   normal source build intentionally permits no repository.
+4. Stage exactly eight reviewed executables plus the pinned upstream license,
+   third-party notices, and SBOM using the relative layout in
+   [`packaging/README.md`](../packaging/README.md).
+5. Replace every gateway token and the approved-fixture-manifest token in
+   `runtime-matrix.json.in`. Confirm the profile manifest equals the linker
+   allowlist in all four binaries. Do not change the backend lock without a new
+   source/dynamic audit.
+6. Build the internal ZIP with the explicit profile and `--vendor-dir`.
+7. Validate manifest/schema/checksums, scan, sign, and test the exact bytes on
+   the supported endpoint matrix.
+8. Publish that exact ZIP and a signature or SHA-256 through separate trusted
+   portal metadata. Archive the inputs, outputs, tests, approval, and rollback.
 
-Example assembly command:
+Example:
 
 ```text
 codegraph-harness bundle \
-  --version 0.1.1-company.1 \
-  --profile /secure-build/input/company-profile.json \
-  --vendor-dir /secure-build/input/vendor \
-  --output /secure-build/output/codegraph-harness-0.1.1-company.1.zip
+  --version 0.2.0-rc.1-company.1 \
+  --profile /approved/input/runtime-matrix.json \
+  --vendor-dir /approved/input/native \
+  --output /approved/output/codegraph-harness-0.2.0-rc.1-company.1.zip
 ```
 
-The profile, vendor directory, and output paths above are examples, not prescribed company paths.
+The paths are examples only. The builder never scans the vendor directory and
+never downloads a missing file.
 
-## Existing harness boundary
+## Existing harness ownership
 
-- Keep the public plugin name and Rule filename namespaced.
-- Do not merge private Rules into this public repository.
-- Treat an existing, unowned Rule collision as an installation failure.
-- Decide centrally whether MCP is deployed through `managed-mcp.json` or plugin configuration. Do not enable both paths.
-- If `managed-mcp.json` exists, the plugin remains Skills/Agents-only and endpoint management owns the MCP server definition.
-- If managed MCP is not exclusive, allow only a fixed wrapper command. Do not place a dynamic project path in the managed `serverCommand` argument list; the wrapper must validate the session root against an OS-managed allowed-root policy.
+- Keep `codegraph-evaluator`, `company-codegraph`, and
+  `codegraph-harness.md` namespaced.
+- Continue installing Rules outside the Plugin; the installer stops on an
+  unowned same-name file and never overwrites a user-modified owned file.
+- Do not write a global or project `AGENTS.md`; install the Codex user Skill.
+- Decide centrally between exclusive `managed-mcp.json` and installer-managed
+  registration. Do not operate both as competing owners.
+- If managed MCP is exclusive, distribute the fixed gateway through endpoint
+  management and use the ZIP only for Plugin/Rule/Skill assets.
+- Never register the upstream Codebase-Memory MCP directly.
 
-## Business-user command
+## Business-user installation
 
-After downloading and extracting the internally approved ZIP:
+The public adapter-only bundle needs no allowed root. A runtime bundle requires
+the exact compiled public fixture and its explicit absolute root:
 
 ```text
-./install.sh --dry-run
-./install.sh
+./install.sh --dry-run --allowed-root /absolute/approved/public-fixtures
+./install.sh --allowed-root /absolute/approved/public-fixtures
 ```
 
 ```text
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -DryRun
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+powershell.exe -NoProfile -File .\install.ps1 -DryRun -AllowedRoot C:\Approved\PublicFixtures
+powershell.exe -NoProfile -File .\install.ps1 -AllowedRoot C:\Approved\PublicFixtures
 ```
 
-Verify the ZIP against the software portal's separately stored SHA-256 value or signature before extraction. The installer performs no package or network download; its in-band `SHA256SUMS` is only a secondary integrity check. Enterprise policy may require a stricter PowerShell invocation or a signed package; the internal release owner must define that command.
+The endpoint must have an organization-managed Git executable. It does not need
+GitHub, npm, PyPI, Go registry, or vendor-server access. If managed Claude Code
+policy blocks local marketplaces, pass `--skip-plugin`/`-SkipPlugin` and deploy
+the Plugin centrally.
 
-## Production gate
+Verify the complete ZIP before extraction. Dry-run validates every entry and
+shows the selected runtime without writing state.
 
-Do not add a backend to the business-user bundle until the backend ADR is closed with recorded evidence for quality, security, freshness, offline operation, Windows/macOS support, and rollback. The public `v0.1.1-eval` plugin intentionally contains no MCP server.
+## Index operation
 
-For environments where company code cannot leave the organization, AppSec or endpoint engineering must attach firewall/EDR evidence showing that the backend and its descendants cannot reach DNS, HTTP(S), proxies, update services, or telemetry endpoints. Configuration flags alone are insufficient. If the approved Claude Code service path itself is uncertain, stop and resolve that contract before evaluating company source.
+Index builds are an IT/developer operation, not an MCP tool. Use the installed
+gateway with the same allowed root, backend/config/Git paths, and hashes in the
+registration receipt. Build only the clean committed public fixture whose
+content manifest is compile-approved by the binary and profile. The first
+successful build activates an immutable generation; later
+failures leave the previous generation unchanged.
+
+Index rebuild triggers should be explicit and managed, for example after an
+approved checkout/commit transition. Do not let the model, filesystem watcher,
+or upstream auto-indexer refresh the graph.
+
+## Company-source promotion gate
+
+The checked-in installer deliberately registers `public-fixture`. Promotion is
+a new reviewed internal release, not a user flag change. Before creating it:
+
+1. test the exact four native backend and gateway hashes;
+2. enforce zero external DNS/TCP/UDP for gateway, backend, Git, and descendants;
+3. make HOME/keychain/SSH agent/other repositories/credential env inaccessible;
+4. mount or ACL the approved source root read-only for query operation and allow
+   writes only to the private state root;
+5. exercise startup, build, normal queries, invalid input, crash, stale/dirty,
+   upgrade, rollback, uninstall, retention, and purge;
+6. verify Windows and macOS on every supported CPU under enterprise policy;
+   on Windows, prove there is no backend start-to-Job-Object-assignment escape
+   window, using a suspended/gated launcher or an independently enforced EDR
+   process-tree policy;
+7. sign the approval policy so an endpoint user cannot self-assert approval;
+8. repeat the client token/quality evaluation on representative public or
+   internally approved tasks and record that it currently fails the cost gate.
+
+If any item is missing, retain public-fixture-only behavior.
