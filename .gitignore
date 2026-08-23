@@ -8,7 +8,8 @@ results/
 evaluation-results/
 graphify-out/
 .codegraph-state/
-vendor/
+vendor/*
+!vendor/codebase-memory-v0.10.8.lock.json
 *.pem
 *.key
 *.p12

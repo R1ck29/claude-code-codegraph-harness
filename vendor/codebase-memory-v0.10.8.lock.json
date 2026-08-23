@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "backend": {
+    "id": "codebase-memory",
+    "version": "0.10.8",
+    "tag": "v0.10.8",
+    "commit": "46ae198fc11cda80e817acbc5f5908d7c2de7032",
+    "repository": "https://github.com/DeusData/codebase-memory-mcp",
+    "license": "MIT",
+    "tool_profile": "analysis"
+  },
+  "release": {
+    "published_at": "2026-08-19T02:42:10Z",
+    "sbom": {
+      "url": "https://github.com/DeusData/codebase-memory-mcp/releases/download/v0.10.8/sbom.json",
+      "sha256": "23f4deeec3d052ced9174d94b16d322ba4bafa8d3e9fd6a0fcc63f36dcd729c9"
+    }
+  },
+  "artifacts": [
+    {
+      "platform": "darwin",
+      "architecture": "arm64",
+      "archive": "codebase-memory-mcp-darwin-arm64.tar.gz",
+      "archive_sha256": "9bd840dfb3ec7eaef4f310382057adaa5b0e904df883104d03ffcf39836afd07",
+      "executable": "codebase-memory-mcp",
+      "executable_sha256": "2412e017268bef8f847f38d1b0f79f63185b38c27fe6fba637067bfc87c0eedf"
+    },
+    {
+      "platform": "darwin",
+      "architecture": "amd64",
+      "archive": "codebase-memory-mcp-darwin-amd64.tar.gz",
+      "archive_sha256": "2b193085410af3801634a522f4b17dcd6699695e015a068393c87817c1d260d4",
+      "executable": "codebase-memory-mcp",
+      "executable_sha256": "1d5b79257d91973809ee70482781db3d1a78f62fc1cd5d18a5ab0608451d16d4"
+    },
+    {
+      "platform": "windows",
+      "architecture": "amd64",
+      "archive": "codebase-memory-mcp-windows-amd64.zip",
+      "archive_sha256": "b43ad982994c4d829670749e08d3b622a74bb20041fc0a7d02bef6113f81c34d",
+      "executable": "codebase-memory-mcp.exe",
+      "executable_sha256": "b4b403b1d7c4def3785f148b93f345ce8427858f4f5489ce28580c4387a336a6"
+    },
+    {
+      "platform": "windows",
+      "architecture": "arm64",
+      "archive": "codebase-memory-mcp-windows-arm64.zip",
+      "archive_sha256": "254b26e819f00bab7f430c5f809d37d22b07bb3eb6427e290e5a27ba5b8e983e",
+      "executable": "codebase-memory-mcp.exe",
+      "executable_sha256": "67b0341ee62f07f850d3954e4f387855f90ea8c6c4b7ed41b8a62d61344373a4"
+    }
+  ],
+  "endpoint_policy": {
+    "allow_online_installers": false,
+    "allow_package_manager_wrappers": false,
+    "allow_ui": false,
+    "allow_auto_index": false,
+    "allow_watch": false,
+    "allow_update": false,
+    "require_process_tree_egress_deny": true
+  }
+}
