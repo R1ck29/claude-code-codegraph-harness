@@ -125,7 +125,7 @@ jobs:
         run: |
           version="${TAG_NAME#v}"
           PYTHONPATH=src python3 -m codegraph_harness.bundle --version "$version" --profile packaging/profiles/public.json --output "dist/codegraph-harness-${version}.zip"
-          sha256sum "dist/codegraph-harness-${version}.zip" > "dist/codegraph-harness-${version}.zip.sha256"
+          (cd dist && sha256sum "codegraph-harness-${version}.zip" > "codegraph-harness-${version}.zip.sha256")
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}

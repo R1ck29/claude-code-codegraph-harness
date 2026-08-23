@@ -42,6 +42,18 @@ class ReleaseMetadataTests(unittest.TestCase):
             )
         self.assertEqual(marketplace["plugins"][0]["version"], expected)
 
+    def test_release_checksum_uses_the_downloaded_asset_basename(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn(
+            '(cd dist && sha256sum "codegraph-harness-${version}.zip" '
+            '> "codegraph-harness-${version}.zip.sha256")',
+            workflow,
+        )
+        self.assertNotIn('sha256sum "dist/codegraph-harness-', workflow)
+
 
 @unittest.skipIf(jsonschema is None, "jsonschema is not installed")
 class ProductContractTests(unittest.TestCase):
