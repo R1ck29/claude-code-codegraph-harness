@@ -43,8 +43,12 @@ for configured_root in "$DATA_ROOT" "$STATE_ROOT"; do
     *) fail "Uninstaller paths must be absolute: ${configured_root}" ;;
   esac
 done
-[ "$DATA_ROOT" != "/" ] && [ "$DATA_ROOT" != "$HOME" ] || fail "Unsafe data root"
-[ "$STATE_ROOT" != "/" ] && [ "$STATE_ROOT" != "$HOME" ] || fail "Unsafe state root"
+if [ "$DATA_ROOT" = "/" ] || [ "$DATA_ROOT" = "$HOME" ]; then
+  fail "Unsafe data root"
+fi
+if [ "$STATE_ROOT" = "/" ] || [ "$STATE_ROOT" = "$HOME" ]; then
+  fail "Unsafe state root"
+fi
 
 CURRENT_ROOT="${STATE_ROOT}/current"
 [ -d "$CURRENT_ROOT" ] || fail "No installation receipt found at ${CURRENT_ROOT}"

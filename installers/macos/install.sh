@@ -66,8 +66,12 @@ for configured_root in "$CLAUDE_CONFIG_ROOT" "$CODEX_SKILL_ROOT" "$DATA_ROOT" "$
     *) fail "Installer paths must be absolute: ${configured_root}" ;;
   esac
 done
-[ "$DATA_ROOT" != "/" ] && [ "$DATA_ROOT" != "$HOME" ] || fail "Unsafe data root"
-[ "$STATE_ROOT" != "/" ] && [ "$STATE_ROOT" != "$HOME" ] || fail "Unsafe state root"
+if [ "$DATA_ROOT" = "/" ] || [ "$DATA_ROOT" = "$HOME" ]; then
+  fail "Unsafe data root"
+fi
+if [ "$STATE_ROOT" = "/" ] || [ "$STATE_ROOT" = "$HOME" ]; then
+  fail "Unsafe state root"
+fi
 if [ -n "$ALLOWED_ROOT" ]; then
   case "$ALLOWED_ROOT" in
     /*) ;;
@@ -76,7 +80,9 @@ if [ -n "$ALLOWED_ROOT" ]; then
   [ ! -L "$ALLOWED_ROOT" ] || fail "--allowed-root must not be a symlink"
   [ -d "$ALLOWED_ROOT" ] || fail "--allowed-root must be an existing directory"
   ALLOWED_ROOT="$(cd "$ALLOWED_ROOT" && pwd -P)"
-  [ "$ALLOWED_ROOT" != "/" ] && [ "$ALLOWED_ROOT" != "$HOME" ] || fail "Unsafe allowed root"
+  if [ "$ALLOWED_ROOT" = "/" ] || [ "$ALLOWED_ROOT" = "$HOME" ]; then
+    fail "Unsafe allowed root"
+  fi
 fi
 
 if [ "$(uname -s)" != "Darwin" ] && [ "${CODEGRAPH_ALLOW_TEST_OS:-0}" != "1" ]; then
@@ -250,7 +256,9 @@ if [ "$RUNTIME_INSTALL" -eq 1 ] && [ -e "$RUNTIME_TARGET_ROOT" ]; then
   done
   [ "$(cat "${CURRENT_ROOT}/gateway_path")" = "$GATEWAY_TARGET" ] || fail "Gateway path is not owned by this extension"
   [ "$(cat "${CURRENT_ROOT}/backend_path")" = "$BACKEND_TARGET" ] || fail "Backend path is not owned by this extension"
-  [ -f "$GATEWAY_TARGET" ] && [ -f "$BACKEND_TARGET" ] || fail "Owned runtime is incomplete"
+  if [ ! -f "$GATEWAY_TARGET" ] || [ ! -f "$BACKEND_TARGET" ]; then
+    fail "Owned runtime is incomplete"
+  fi
   [ "$(cat "${CURRENT_ROOT}/gateway_sha256")" = "$(sha256_file "$GATEWAY_TARGET")" ] || fail "Gateway was changed after installation"
   [ "$(cat "${CURRENT_ROOT}/backend_sha256")" = "$(sha256_file "$BACKEND_TARGET")" ] || fail "Backend was changed after installation"
   [ "$(cat "${CURRENT_ROOT}/git_binary")" = "$GIT_BINARY" ] || fail "Managed Git path changed since installation"
@@ -358,7 +366,9 @@ if [ ! -d "$INSTALL_ROOT" ]; then
   mv "$STAGING_ROOT/install" "$INSTALL_ROOT"
   INSTALL_ROOT_CREATED=1
 fi
-[ ! -L "$CONFIG_TARGET" ] && [ -f "$CONFIG_TARGET" ] || fail "Installed routing policy is missing or unsafe"
+if [ -L "$CONFIG_TARGET" ] || [ ! -f "$CONFIG_TARGET" ]; then
+  fail "Installed routing policy is missing or unsafe"
+fi
 [ "$(sha256_file "$CONFIG_TARGET")" = "$CONFIG_SHA256" ] || fail "Installed routing policy differs from this bundle"
 if [ "$REINSTALL" -eq 1 ]; then
   [ "$(cat "${CURRENT_ROOT}/config_path")" = "$CONFIG_TARGET" ] || fail "Routing policy path changed since installation"
