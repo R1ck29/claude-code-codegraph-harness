@@ -1,3 +1,12 @@
+> **アーカイブ済み（日常利用停止・追加投資終了） — 2026-11-27**
+>
+> 本リポジトリは日常利用および追加開発を停止し、読み取り専用アーカイブとしています（削除はしません）。
+>
+> - **保存する証拠**: 公開フィクスチャでの実測結果（Codex グラフ条件で入力トークン +48–52%、強制利用した Claude 条件で実効入力 +58–112% 増、トークン削減主張なし）およびオフライン配布・隔離要件の記録（`v0.2.0-rc.1`、`docs/evidence/`）は検証済みの負の証拠としてそのまま保存します。
+> - **`code-review-graph` との区別**: 本リポジトリはローカル Go ゲートウェイ＋Codebase-Memory 系の配布・評価ハーネスであり、`tirth8205/code-review-graph`（PyPI / `uvx` ツールおよびそのフック・MCP）とは別物です。本リポジトリの停止は `tirth8205/code-review-graph` の利用停止を意味しません。
+> - **端末状態**: 作業用 Linux 環境（box）では本リポジトリ由来の hooks/plugin を無効化済み（未導入確認済み）です。Mac 側はオフラインのため未確認・未適用（pending）であり、復帰後に同手順で点検・無効化します。
+> - **再開条件**: (1) 対象 OS（Windows/macOS）でのプロセスツリー単位のネットワーク遮断・隔離証拠が揃い、(2) `R1ck29/agent-harness-eval` の採否ゲート上で、代表課題に対して品質維持または向上しつつ総消費（ツール出力込み）を削減できる見込みの再現条件が示された場合にのみ再審査します。
+
 # Claude Code Codegraph Harness
 
 An offline local codegraph gateway, dual-client adapters, evaluation runner, and
